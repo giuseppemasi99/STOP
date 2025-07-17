@@ -3,13 +3,12 @@
 #include <cmath>
 #include <chrono>
 #include <set>
-#include "solution.h"
+#include <tuple>
 
 using namespace std;
 using namespace chrono;
 
-
-Solution getSTOPSolution(
+tuple<vector<vector<vector<int>>>, vector<double>, double> getSTOPSolution(
     int n_machines, int n_demands, int n_models, double V,
     const vector<vector<double>>& omega,
     const vector<double>& Z_k, const vector<int>& CI_k, const vector<double>& PUE_k, const vector<double>& e_k, double C_avg,
@@ -336,5 +335,5 @@ Solution getSTOPSolution(
     }
 
     double elapsed_time = elapsed_time_demands_0 + elapsed_time_c + elapsed_time_alpha_k + elapsed_time_build + max(elapsed_time_relaxed, elapsed_time_b_ub_sub + max(elapsed_time_NQ, elapsed_time_SQ) + elapsed_time_integral);
-    return Solution(x, gamma_k, elapsed_time);
+    return make_tuple(x, gamma_k, elapsed_time);
 }

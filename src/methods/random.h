@@ -1,14 +1,14 @@
-#include "solution.h"
 #include <vector>
 #include <random>
 #include <chrono>
 #include <tuple>
 #include <algorithm>
+#include <iostream>
 
 
 using namespace std;
 
-Solution getRandomSolution(int n_machines, int n_demands, int n_models, std::mt19937& rng)
+tuple<vector<vector<vector<int>>>, vector<double>, double> getRandomSolution(int n_machines, int n_demands, int n_models, mt19937& rng)
 {
     auto start = chrono::high_resolution_clock::now();
 
@@ -46,7 +46,7 @@ Solution getRandomSolution(int n_machines, int n_demands, int n_models, std::mt1
             int found = 0;
             for (int d = 0; d < n_demands; ++d)
                 for (int mod = 0; mod < n_models; ++mod)
-                    found = std::max(found, x[m][d][mod]);
+                    found = max(found, x[m][d][mod]);
             gamma_k[m] = found;
         }
     }
@@ -54,5 +54,5 @@ Solution getRandomSolution(int n_machines, int n_demands, int n_models, std::mt1
     auto end = chrono::high_resolution_clock::now();
     double elapsed_time = chrono::duration<double>(end - start).count();
 
-    return Solution(x, gamma_k, elapsed_time);
+    return make_tuple(x, gamma_k, elapsed_time);
 }

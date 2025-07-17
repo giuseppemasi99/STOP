@@ -1,12 +1,12 @@
 #include <vector>
 #include <chrono>
 #include <cmath>
+#include <tuple>
 #include <algorithm>
-#include "solution.h"
 
 using namespace std;
 
-Solution getRRSolution(int n_machines, int n_demands, int n_models) {
+tuple<vector<vector<vector<int>>>, vector<double>, double> getRRSolution(int n_machines, int n_demands, int n_models) {
     auto start = chrono::high_resolution_clock::now();
 
     // 3D assignment: [n_machines][n_demands][n_models]
@@ -92,5 +92,5 @@ Solution getRRSolution(int n_machines, int n_demands, int n_models) {
     auto end = chrono::high_resolution_clock::now();
     double elapsed_time = chrono::duration<double>(end - start).count();
 
-    return Solution(x, gamma_k, elapsed_time);
+    return make_tuple(x, gamma_k, elapsed_time);
 }

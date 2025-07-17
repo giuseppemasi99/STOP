@@ -1,10 +1,10 @@
 #include "argparse.h"
 #include "utils.h"
 #include "model/model.h"
-#include "methods/solution.h"
 #include "methods/random.h"
 #include "methods/roundrobin.h"
 #include "methods/stop.h"
+#include "methods/Li2024.h"
 #include "logger.h"
 #include <iostream>
 #include <string>
@@ -140,7 +140,9 @@ int main(int argc, char* argv[]) {
 
     mt19937 rng_random(seed);
 
-    Solution sol({}, {}, 0.0); // default initialization
+    vector<vector<vector<int>>> x;
+    vector<double> gamma_k;
+    double elapsed_time = 0.0;
 
     for (int t = 0; t < T; ++t) {
         uniform_int_distribution<> dist(min_demands_per_round, max_demands_per_round - 1);
@@ -153,28 +155,27 @@ int main(int argc, char* argv[]) {
         vector<vector<double>> omega = model->get_omega(sizes);
 
         if (method == "Random")
-            sol = getRandomSolution(n_machines, n_demands, n_models, rng_random);
+            tie(x, gamma_k, elapsed_time) = getRandomSolution(n_machines, n_demands, n_models, rng_random);
         else if (method == "RoundRobin")
-            sol = getRRSolution(n_machines, n_demands, n_models);
-        // method contains STOP
+            tie(x, gamma_k, elapsed_time) = getRRSolution(n_machines, n_demands, n_models);
         else if (method.find("STOP") != string::npos) {
             vector<double> alpha_k = alpha(Q_k, Z_k, W_k, FLOPS_k, CI_k, PUE_k, e_k);
             vector<double> eta_k = eta(W_k, epsilon_k, D_k, const_k, Q_k, FLOPS_k);
-            sol = getSTOPSolution(
-                n_machines, n_demands, n_models, V, omega, 
-                Z_k, CI_k, PUE_k, e_k, C_avg, W_k, FLOPS_k, 
-                R_avg, Q_k, sigma, B_k, Y, delta_j, 
-                P_avg, eta_k, alpha_k, normalization_constant    
+            tie(x, gamma_k, elapsed_time) = getSTOPSolution(
+                n_machines, n_demands, n_models, V, omega, Z_k, CI_k, PUE_k, e_k, C_avg, W_k, FLOPS_k, 
+                R_avg, Q_k, sigma, B_k, Y, delta_j, P_avg, eta_k, alpha_k, normalization_constant    
             );
-            
-            return 0;
+        }
+        else if (method.find("Li2024") != string::npos) {
+            vector<double> Z_k_const_ = Z_k_const(CI_k, PUE_k, e_k);
+            tie(x, gamma_k, elapsed_time) = getLi2024Solution(
+                method, V, k_t, n_machines, n_models, n_demands, FLOPS_k, Z_k_const_, 
+                omega, sigma, B_k, P_avg, delta_j, Q_k, epsilon_k, D_k, const_k, C_avg, R_avg
+            );
+            // check k_t modified
         }
         else
             throw runtime_error("Unknown method: " + method);
-        
-        auto& x = sol.x;
-        auto& gamma_k = sol.gamma_k;
-        double elapsed_time = sol.elapsed_time;
 
         vector<double> x_at_omega(n_machines, 0.0);
         for (int m = 0; m < n_machines; ++m) {
