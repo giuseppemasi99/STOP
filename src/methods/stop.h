@@ -23,27 +23,41 @@ Solution getSTOPSolution(
     vector<vector<vector<int>>> x(n_machines, vector<vector<int>>(n_demands, vector<int>(n_models, 0)));
     vector<double> gamma_k(n_machines, 0.0);
     
+    double elapsed_time_demands_0 = 0.0;
+    double elapsed_time_c = 0.0;
+    double elapsed_time_alpha_k = 0.0;
+    double elapsed_time_build = 0.0;
+    double elapsed_time_relaxed = 0.0;
+    double elapsed_time_b_ub_sub = 0.0;
+    double elapsed_time_NQ = 0.0;
+    double elapsed_time_SQ = 0.0;
+    double elapsed_time_integral = 0.0;
+
     if (n_demands > 0){
+        auto start_c = high_resolution_clock::now();
         vector<double> c;
         // x_{k,i,j} terms
         for (int k = 0; k < n_machines; ++k) {
             for (int i = 0; i < n_demands; ++i) {
                 for (int j = 0; j < n_models; ++j) {
                     double val = -V
-                        + omega[i][j] * (Z_k[k] * 1e-3 * CI_k[k] * PUE_k[k] * e_k[k] * 100.0 / C_avg
+                    + omega[i][j] * (Z_k[k] * 1e-3 * CI_k[k] * PUE_k[k] * e_k[k] * 100.0 / C_avg
                         + 100.0 * W_k[k] / (FLOPS_k[k] * R_avg)
                         + (Q_k[k] / normalization_constant))
                         + W_k[k] * 100.0 * sigma[i] / (B_k[k] * R_avg)
                         + 100.0 * Y * (P_avg - delta_j[j]) / (n_demands * P_avg);
-                    c.push_back(val);
+                        c.push_back(val);
+                    }
                 }
             }
-        }
-        // gamma_k terms
-        for (int k = 0; k < n_machines; ++k) {
-            c.push_back(eta_k[k] * 100.0 / R_avg);
-        }
-
+            // gamma_k terms
+            for (int k = 0; k < n_machines; ++k) {
+                c.push_back(eta_k[k] * 100.0 / R_avg);
+            }
+        auto end_c = high_resolution_clock::now();
+        elapsed_time_c = duration<double>(end_c - start_c).count();
+        
+        auto start_alpha_k = high_resolution_clock::now();
         auto it = find(alpha_k.begin(), alpha_k.end(), 0.0);
 
         if (it != alpha_k.end()) {
@@ -62,15 +76,18 @@ Solution getSTOPSolution(
             for (int i = 0; i < n_demands; ++i) {
                 x[k][i][n_models-1] = 1;
             }
+            auto end_alpha_k = high_resolution_clock::now();
+            elapsed_time_alpha_k = duration<double>(end_alpha_k - start_alpha_k).count();
 
         } else {
+
             Highs highs;
             highs.setOptionValue("output_flag", false);
-
+            
+            auto start_build = high_resolution_clock::now();
             int n_x = n_machines * n_demands * n_models;
             int n_vars = n_x + n_machines;
             int n_rows = n_demands + n_machines * n_demands * n_models;
-
             vector<int> Astart(n_vars + 1, 0);
             vector<int> Aindex;
             vector<double> Avalue;
@@ -97,6 +114,10 @@ Solution getSTOPSolution(
             vector<double> b_ub;
             b_ub.insert(b_ub.end(), n_demands, 1.0);
             b_ub.insert(b_ub.end(), n_machines * n_demands * n_models, 0.0);
+            auto end_build = high_resolution_clock::now();
+            elapsed_time_build = duration<double>(end_build - start_build).count();
+            
+            auto start_relaxed = high_resolution_clock::now();
             HighsModel model_relaxed;
             model_relaxed.lp_.num_col_ = n_vars;
             model_relaxed.lp_.num_row_ = n_rows;
@@ -119,6 +140,8 @@ Solution getSTOPSolution(
                     }
                 }
             }
+            auto end_relaxed = high_resolution_clock::now();
+            elapsed_time_relaxed = duration<double>(end_relaxed - start_relaxed).count();
 
             bool has_fractional = false;
             for (int k = 0; k < n_machines && !has_fractional; ++k) {
@@ -132,8 +155,12 @@ Solution getSTOPSolution(
                 }
             }
             if (has_fractional) {
+                auto start_b_ub_sub = high_resolution_clock::now();
                 vector<double> b_ub_sub(b_ub.begin(), b_ub.begin() + n_demands);
+                auto end_b_ub_sub = high_resolution_clock::now();
+                elapsed_time_b_ub_sub = duration<double>(end_b_ub_sub - start_b_ub_sub).count();
 
+                auto start_NQ = high_resolution_clock::now();
                 vector<double> c_NQ(c.begin(), c.begin() + n_machines * n_demands * n_models);
                 vector<int> Astart_NQ(n_x + 1, 0);
                 vector<int> Aindex_NQ;
@@ -171,7 +198,10 @@ Solution getSTOPSolution(
                         }
                     }
                 }
+                auto end_NQ = high_resolution_clock::now();
+                elapsed_time_NQ = duration<double>(end_NQ - start_NQ).count();
 
+                auto start_SQ = high_resolution_clock::now();
                 vector<double> c_SQ = c_NQ;
                 for (int k = 0; k < n_machines; ++k)
                     c_SQ.push_back(eta_k[k] * (n_demands * n_models));
@@ -211,6 +241,8 @@ Solution getSTOPSolution(
                         }
                     }
                 }
+                auto end_SQ = high_resolution_clock::now();
+                elapsed_time_SQ = duration<double>(end_SQ - start_SQ).count();
 
                 bool any_diff = false;
                 for (int k = 0; k < n_machines && !any_diff; ++k) {
@@ -224,6 +256,7 @@ Solution getSTOPSolution(
                     }
                 }
                 if (any_diff) {
+                    auto start_integral = high_resolution_clock::now();
                     vector<int> I0;
                     for (int i = 0; i < n_demands; ++i) {
                         int sum = 0;
@@ -281,15 +314,17 @@ Solution getSTOPSolution(
                             }
                         }
                     }
-
-                    
-
+                    auto end_integral = high_resolution_clock::now();
+                    elapsed_time_integral = duration<double>(end_integral - start_integral).count();
 
                 } else {
                     x = x_SQ;
                 }
             }
         }
+    } else {
+        auto end_demands_0 = high_resolution_clock::now();
+        elapsed_time_demands_0 = duration<double>(end_demands_0 - start).count();
     }
 
     for (int k_idx = 0; k_idx < n_machines; ++k_idx) {
@@ -300,7 +335,6 @@ Solution getSTOPSolution(
         gamma_k[k_idx] = max_val;
     }
 
-    auto end = high_resolution_clock::now();
-    double elapsed_time = duration<double>(end - start).count();
+    double elapsed_time = elapsed_time_demands_0 + elapsed_time_c + elapsed_time_alpha_k + elapsed_time_build + max(elapsed_time_relaxed, elapsed_time_b_ub_sub + max(elapsed_time_NQ, elapsed_time_SQ) + elapsed_time_integral);
     return Solution(x, gamma_k, elapsed_time);
 }
