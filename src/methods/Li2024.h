@@ -11,7 +11,7 @@ using namespace std;
 tuple<vector<vector<vector<int>>>, vector<double>, double> getLi2024Solution(
     const string& method, double V, vector<double>& k_t, int n_machines, int n_models, int n_demands,
     const vector<double>& FLOPS_k, const vector<double>& Z_k_const_, const vector<vector<double>>& omega, 
-    const vector<double>& sigma, const vector<double>& B_k, int P_avg, const vector<double>& delta_j,
+    const vector<double>& sigma, const vector<double>& B_k, double P_avg, const vector<double>& delta_j,
     const vector<double>& Q_k, const vector<double>& epsilon_k, const vector<int>& D_k, const vector<double>& const_k,
     double C_avg, double R_avg) 
 {

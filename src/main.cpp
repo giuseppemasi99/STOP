@@ -29,9 +29,9 @@ int main(int argc, char* argv[]) {
     int seed = parser.get_int("seed");
     int min_demands_per_round = 0;
 
-    bool logger_enabled = true;
+    bool logger_enabled = false;
 
-    int T = 300;
+    int T = 3;
 
     unique_ptr<Model> model;
     if (model_name == "Yolo") model = make_unique<Yolo>();
@@ -97,7 +97,7 @@ int main(int argc, char* argv[]) {
 
     double Y = 0.0;
     vector<double> delta_j_original = model->get_delta_j_original();
-    int P_avg = model->get_P_avg();
+    double P_avg = model->get_P_avg();
 
     unordered_map<string, nlohmann::json> params;
     params["seed"] = seed;
@@ -119,7 +119,7 @@ int main(int argc, char* argv[]) {
     params["R_avg"] = R_avg;
 
     ostringstream oss;
-    oss << "TEST/" << method;
+    oss << "TEST/" << model_name << "/" << method;
     if (method != "Random" && method != "RoundRobin" && method != "Li2024-AllDemandsExecuted")
         oss << "-V=" << V;
     oss << "/n_m=" << n_machines << "-max_d=" << max_demands_per_round;
@@ -147,7 +147,6 @@ int main(int argc, char* argv[]) {
     for (int t = 0; t < T; ++t) {
         uniform_int_distribution<> dist(min_demands_per_round, max_demands_per_round - 1);
         int n_demands = dist(rng_demands);
-        n_demands = 2;
         cout << "Round " << t + 1 << ": " << n_demands << " demands" << endl;
 
         vector<int> sizes = model->get_sizes(n_demands, rng_sizes);
@@ -266,11 +265,6 @@ int main(int argc, char* argv[]) {
             {"Y", Y}
         };
         logger.save_dict(round_result, "t=" + to_string(t) + ".json");
-
-
-
-
-        return 0;
 
     }
 
