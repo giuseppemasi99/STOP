@@ -172,7 +172,6 @@ int main(int argc, char* argv[]) {
                 method, V, k_t, n_machines, n_models, n_demands, FLOPS_k, Z_k_const_, 
                 omega, sigma, B_k, P_avg, delta_j, Q_k, epsilon_k, D_k, const_k, C_avg, R_avg
             );
-            // check k_t modified
         }
         else
             throw runtime_error("Unknown method: " + method);
@@ -187,7 +186,6 @@ int main(int argc, char* argv[]) {
             }
             x_at_omega[m] = round(sum);
         }
-
         vector<double> x_at_sigma(n_machines, 0.0);
         for (int m = 0; m < n_machines; ++m) {
             double sum = 0.0;
@@ -200,7 +198,6 @@ int main(int argc, char* argv[]) {
             }
             x_at_sigma[m] = sum;
         }
-
         double x_at_delta = 0.0;
         for (int m = 0; m < n_machines; ++m) {
             for (int d = 0; d < n_demands; ++d) {

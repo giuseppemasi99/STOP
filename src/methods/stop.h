@@ -40,7 +40,7 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getSTOPSolution(
             for (int i = 0; i < n_demands; ++i) {
                 for (int j = 0; j < n_models; ++j) {
                     double val = -V
-                    + omega[i][j] * (Z_k[k] * 1e-3 * CI_k[k] * PUE_k[k] * e_k[k] * 100.0 / C_avg
+                        + omega[i][j] * (Z_k[k] * 1e-3 * CI_k[k] * PUE_k[k] * e_k[k] * 100.0 / C_avg
                         + 100.0 * W_k[k] / (FLOPS_k[k] * R_avg)
                         + (Q_k[k] / normalization_constant))
                         + W_k[k] * 100.0 * sigma[i] / (B_k[k] * R_avg)
@@ -55,7 +55,7 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getSTOPSolution(
             }
         auto end_c = high_resolution_clock::now();
         elapsed_time_c = duration<double>(end_c - start_c).count();
-        
+
         auto start_alpha_k = high_resolution_clock::now();
         auto it = find(alpha_k.begin(), alpha_k.end(), 0.0);
 
