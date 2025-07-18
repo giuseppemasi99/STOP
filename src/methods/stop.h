@@ -18,10 +18,10 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getSTOPSolution(
     const vector<double>& eta_k, const vector<double>& alpha_k, double normalization_constant
 ) {
     auto start = high_resolution_clock::now();
-    
+
     vector<vector<vector<int>>> x(n_machines, vector<vector<int>>(n_demands, vector<int>(n_models, 0)));
     vector<double> gamma_k(n_machines, 0.0);
-    
+
     double elapsed_time_demands_0 = 0.0;
     double elapsed_time_c = 0.0;
     double elapsed_time_alpha_k = 0.0;
@@ -115,7 +115,7 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getSTOPSolution(
             b_ub.insert(b_ub.end(), n_machines * n_demands * n_models, 0.0);
             auto end_build = high_resolution_clock::now();
             elapsed_time_build = duration<double>(end_build - start_build).count();
-            
+
             auto start_relaxed = high_resolution_clock::now();
             HighsModel model_relaxed;
             model_relaxed.lp_.num_col_ = n_vars;

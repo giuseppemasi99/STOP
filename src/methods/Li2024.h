@@ -46,7 +46,6 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getLi2024Solution(
             double val = k_t[n_machines + k] * (Q_k[k] / FLOPS_k[k] + epsilon_k[k] * D_k[k] + const_k[k]);
             c.push_back(val);
         }
-
         int n_x = n_machines * n_demands * n_models;
         int n_vars = n_x + n_machines;
         int n_rows = n_demands + n_machines * n_demands * n_models;
@@ -100,7 +99,6 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getLi2024Solution(
             }
             Astart[n_x + k + 1] = (int)Aindex.size();
         }
-
         vector<double> b_ub;
         b_ub.insert(b_ub.end(), n_demands, 1.0);
         b_ub.insert(b_ub.end(), n_machines * n_demands * n_models, 0.0);
@@ -108,14 +106,12 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getLi2024Solution(
             b_ub.insert(b_ub.end(), FLOPS_k.begin(), FLOPS_k.end());
             b_ub.push_back(static_cast<double>(n_demands));
         }
-
         vector<double> b_lb;
         b_lb.insert(b_lb.end(), n_demands + n_machines * n_demands * n_models, -1.0);
         if (method == "Li2024-AllDemandsExecuted") {
             b_lb.insert(b_lb.end(), n_machines, -1.0);
             b_lb.push_back(static_cast<double>(n_demands));
         }
-
         Highs highs;
         highs.setOptionValue("output_flag", false);
         HighsModelStatus model_status;

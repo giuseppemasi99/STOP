@@ -31,7 +31,7 @@ int main(int argc, char* argv[]) {
 
     bool logger_enabled = false;
 
-    int T = 3;
+    int T = 300;
 
     unique_ptr<Model> model;
     if (model_name == "Yolo") model = make_unique<Yolo>();
@@ -97,7 +97,7 @@ int main(int argc, char* argv[]) {
 
     double Y = 0.0;
     vector<double> delta_j_original = model->get_delta_j_original();
-    double P_avg = model->get_P_avg();
+    double P_avg = (method.find("STOP") != string::npos) ? 50.0 : model->get_P_avg();
 
     unordered_map<string, nlohmann::json> params;
     params["seed"] = seed;
@@ -148,7 +148,7 @@ int main(int argc, char* argv[]) {
         uniform_int_distribution<> dist(min_demands_per_round, max_demands_per_round - 1);
         int n_demands = dist(rng_demands);
         cout << "Round " << t + 1 << ": " << n_demands << " demands" << endl;
-
+        
         vector<int> sizes = model->get_sizes(n_demands, rng_sizes);
         vector<double> sigma = model->get_sigma(sizes);
         vector<vector<double>> omega = model->get_omega(sizes);
