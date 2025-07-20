@@ -29,7 +29,7 @@ int main(int argc, char* argv[]) {
     int seed = parser.get_int("seed");
     int min_demands_per_round = 0;
 
-    bool logger_enabled = false;
+    bool logger_enabled = true;
 
     int T = 300;
 
@@ -119,7 +119,7 @@ int main(int argc, char* argv[]) {
     params["R_avg"] = R_avg;
 
     ostringstream oss;
-    oss << "TEST/" << model_name << "/" << method;
+    oss << "results_new/" << model_name << "/" << method;
     if (method != "Random" && method != "RoundRobin" && method != "Li2024-AllDemandsExecuted")
         oss << "-V=" << V;
     oss << "/n_m=" << n_machines << "-max_d=" << max_demands_per_round;

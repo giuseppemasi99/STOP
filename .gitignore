@@ -1,6 +1,7 @@
 .vscode/
 build/
 results/
+results_new/
 params/
 plots/
 *.sh
