@@ -97,7 +97,8 @@ int main(int argc, char* argv[]) {
 
     double Y = 0.0;
     vector<double> delta_j_original = model->get_delta_j_original();
-    double P_avg = (method.find("STOP") != string::npos) ? 50.0 : model->get_P_avg();
+    double P_avg_original = model->get_P_avg();
+    double P_avg = (method.find("STOP") != string::npos) ? 50.0 : P_avg_original;
 
     unordered_map<string, nlohmann::json> params;
     params["seed"] = seed;
@@ -225,7 +226,7 @@ int main(int argc, char* argv[]) {
             }
         }
         if (total_assignments == 0) {
-            performance = P_avg;
+            performance = P_avg_original;
         } else {
             performance = weighted_sum / non_zero_count;
         }

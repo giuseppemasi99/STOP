@@ -89,10 +89,10 @@ private:
     double mean_seconds = 60.0;
     vector<double> delta_j = {93, 94, 95, 96};
     double P_avg = 94.5;
-    double flops_tiny = 54.888938496;
-    double flops_small = 141.163216896;
-    double flops_medium = 732.594597888;
-    double flops_large = 2500.971347968;
+    double flops_tiny = 27.444469248;
+    double flops_small = 70.581608448;
+    double flops_medium = 366.297298944;
+    double flops_large = 1250.485673984;
 
 public:
     string name() const override { return "Whisper"; }
@@ -145,6 +145,5 @@ public:
         }
         return omega;
     }
-
 
 };
