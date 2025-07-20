@@ -172,12 +172,12 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getSTOPSolution(
                 vector<double> b_ub_sub(b_ub.begin(), b_ub.begin() + n_demands);
                 auto end_sub_build = high_resolution_clock::now();
                 elapsed_time_sub_build = duration<double>(end_sub_build - start_sub_build).count();
-
+                
                 auto start_NQ = high_resolution_clock::now();
                 vector<double> c_NQ(c.begin(), c.begin() + n_machines * n_demands * n_models);
                 HighsModel model_NQ;
                 model_NQ.lp_.num_col_ = n_vars - n_machines;
-                model_NQ.lp_.num_row_ = n_machines;
+                model_NQ.lp_.num_row_ = n_demands;
                 model_NQ.lp_.a_matrix_.start_ = Astart_sub;
                 model_NQ.lp_.a_matrix_.index_ = Aindex_sub;
                 model_NQ.lp_.a_matrix_.value_ = Avalue_sub;
@@ -203,11 +203,13 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getSTOPSolution(
 
                 auto start_SQ = high_resolution_clock::now();
                 vector<double> c_SQ = c_NQ;
-                for (int k = 0; k < n_machines; ++k)
+                for (int k = 0; k < n_machines; ++k){
                     c_SQ.push_back(eta_k[k] * (n_demands * n_models));
+                    Astart_sub.push_back(Astart_sub.back());
+                }
                 HighsModel model_SQ;
                 model_SQ.lp_.num_col_ = n_vars;
-                model_SQ.lp_.num_row_ = n_machines;
+                model_SQ.lp_.num_row_ = n_demands;
                 model_SQ.lp_.a_matrix_.start_ = Astart_sub;
                 model_SQ.lp_.a_matrix_.index_ = Aindex_sub;
                 model_SQ.lp_.a_matrix_.value_ = Avalue_sub;
@@ -230,7 +232,7 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getSTOPSolution(
                 }
                 auto end_SQ = high_resolution_clock::now();
                 elapsed_time_SQ = duration<double>(end_SQ - start_SQ).count();
-
+                
                 bool any_diff = false;
                 for (int k = 0; k < n_machines && !any_diff; ++k) {
                     for (int i = 0; i < n_demands && !any_diff; ++i) {
