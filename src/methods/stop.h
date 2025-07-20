@@ -59,7 +59,7 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getSTOPSolution(
         auto start_alpha_k = high_resolution_clock::now();
         auto it = find(alpha_k.begin(), alpha_k.end(), 0.0);
 
-        if (it != alpha_k.end() && false) {
+        if (it != alpha_k.end()) {
             vector<int> k_empty;
             for (int idx = 0; idx < (int)alpha_k.size(); ++idx) {
                 if (alpha_k[idx] == 0.0) k_empty.push_back(idx);
@@ -104,8 +104,8 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getSTOPSolution(
             }
             for (int k = 0; k < n_machines; ++k) {
                 int start_row = n_demands + k * n_demands * n_models;
-                std::vector<int> rows(n_demands * n_models);
-                std::iota(rows.begin(), rows.end(), start_row);
+                vector<int> rows(n_demands * n_models);
+                iota(rows.begin(), rows.end(), start_row);
                 Aindex.insert(Aindex.end(), rows.begin(), rows.end());
                 Avalue.insert(Avalue.end(), n_demands * n_models, -1.0);
                 Astart[n_x + k + 1] = (int)Aindex.size();
