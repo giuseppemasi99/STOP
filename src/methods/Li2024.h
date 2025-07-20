@@ -92,13 +92,14 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getLi2024Solution(
             Astart[col + 1] = (int)Aindex.size();
         }
         for (int k = 0; k < n_machines; ++k) {
-            for (int i = 0; i < n_demands * n_models; ++i) {
-                int row_gamma = n_demands + k * (n_demands * n_models) + i;
-                Aindex.push_back(row_gamma);
-                Avalue.push_back(-1.0);
-            }
+            int start_row = n_demands + k * n_demands * n_models;
+            std::vector<int> rows(n_demands * n_models);
+            std::iota(rows.begin(), rows.end(), start_row);
+            Aindex.insert(Aindex.end(), rows.begin(), rows.end());
+            Avalue.insert(Avalue.end(), n_demands * n_models, -1.0);
             Astart[n_x + k + 1] = (int)Aindex.size();
         }
+
         vector<double> b_ub;
         b_ub.insert(b_ub.end(), n_demands, 1.0);
         b_ub.insert(b_ub.end(), n_machines * n_demands * n_models, 0.0);

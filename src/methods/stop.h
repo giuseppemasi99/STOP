@@ -27,7 +27,7 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getSTOPSolution(
     double elapsed_time_alpha_k = 0.0;
     double elapsed_time_build = 0.0;
     double elapsed_time_relaxed = 0.0;
-    double elapsed_time_b_ub_sub = 0.0;
+    double elapsed_time_sub_build = 0.0;
     double elapsed_time_NQ = 0.0;
     double elapsed_time_SQ = 0.0;
     double elapsed_time_integral = 0.0;
@@ -59,7 +59,7 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getSTOPSolution(
         auto start_alpha_k = high_resolution_clock::now();
         auto it = find(alpha_k.begin(), alpha_k.end(), 0.0);
 
-        if (it != alpha_k.end()) {
+        if (it != alpha_k.end() && false) {
             vector<int> k_empty;
             for (int idx = 0; idx < (int)alpha_k.size(); ++idx) {
                 if (alpha_k[idx] == 0.0) k_empty.push_back(idx);
@@ -103,13 +103,14 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getSTOPSolution(
                 Astart[col + 1] = (int)Aindex.size();
             }
             for (int k = 0; k < n_machines; ++k) {
-                for (int i = 0; i < n_demands * n_models; ++i) {
-                    int row_gamma = n_demands + k * (n_demands * n_models) + i;
-                    Aindex.push_back(row_gamma);
-                    Avalue.push_back(-1.0);
-                }
+                int start_row = n_demands + k * n_demands * n_models;
+                std::vector<int> rows(n_demands * n_models);
+                std::iota(rows.begin(), rows.end(), start_row);
+                Aindex.insert(Aindex.end(), rows.begin(), rows.end());
+                Avalue.insert(Avalue.end(), n_demands * n_models, -1.0);
                 Astart[n_x + k + 1] = (int)Aindex.size();
             }
+
             vector<double> b_ub;
             b_ub.insert(b_ub.end(), n_demands, 1.0);
             b_ub.insert(b_ub.end(), n_machines * n_demands * n_models, 0.0);
@@ -154,32 +155,32 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getSTOPSolution(
                 }
             }
             if (has_fractional) {
-                auto start_b_ub_sub = high_resolution_clock::now();
-                vector<double> b_ub_sub(b_ub.begin(), b_ub.begin() + n_demands);
-                auto end_b_ub_sub = high_resolution_clock::now();
-                elapsed_time_b_ub_sub = duration<double>(end_b_ub_sub - start_b_ub_sub).count();
-
-                auto start_NQ = high_resolution_clock::now();
-                vector<double> c_NQ(c.begin(), c.begin() + n_machines * n_demands * n_models);
-                vector<int> Astart_NQ(n_x + 1, 0);
-                vector<int> Aindex_NQ;
-                vector<double> Avalue_NQ;
+                auto start_sub_build = high_resolution_clock::now();
+                vector<int> Astart_sub(n_x + 1, 0);
+                vector<int> Aindex_sub;
+                vector<double> Avalue_sub;
                 for (int col = 0; col < n_x; ++col) {
                     for (int idx = Astart[col]; idx < Astart[col + 1]; ++idx) {
                         int row = Aindex[idx];
                         if (row < n_demands) {
-                            Aindex_NQ.push_back(row);
-                            Avalue_NQ.push_back(Avalue[idx]);
+                            Aindex_sub.push_back(row);
+                            Avalue_sub.push_back(Avalue[idx]);
                         }
                     }
-                    Astart_NQ[col + 1] = (int)Aindex_NQ.size();
+                    Astart_sub[col + 1] = (int)Aindex_sub.size();
                 }
+                vector<double> b_ub_sub(b_ub.begin(), b_ub.begin() + n_demands);
+                auto end_sub_build = high_resolution_clock::now();
+                elapsed_time_sub_build = duration<double>(end_sub_build - start_sub_build).count();
+
+                auto start_NQ = high_resolution_clock::now();
+                vector<double> c_NQ(c.begin(), c.begin() + n_machines * n_demands * n_models);
                 HighsModel model_NQ;
                 model_NQ.lp_.num_col_ = n_vars - n_machines;
                 model_NQ.lp_.num_row_ = n_machines;
-                model_NQ.lp_.a_matrix_.start_ = Astart_NQ;
-                model_NQ.lp_.a_matrix_.index_ = Aindex_NQ;
-                model_NQ.lp_.a_matrix_.value_ = Avalue_NQ;
+                model_NQ.lp_.a_matrix_.start_ = Astart_sub;
+                model_NQ.lp_.a_matrix_.index_ = Aindex_sub;
+                model_NQ.lp_.a_matrix_.value_ = Avalue_sub;
                 model_NQ.lp_.col_cost_ = c_NQ;
                 model_NQ.lp_.col_lower_ = vector<double>(n_vars - n_machines, 0.0);
                 model_NQ.lp_.col_upper_ = vector<double>(n_vars - n_machines, 1.0);
@@ -204,25 +205,12 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getSTOPSolution(
                 vector<double> c_SQ = c_NQ;
                 for (int k = 0; k < n_machines; ++k)
                     c_SQ.push_back(eta_k[k] * (n_demands * n_models));
-                vector<int> Astart_SQ(n_vars + 1, 0);
-                vector<int> Aindex_SQ;
-                vector<double> Avalue_SQ;
-                for (int col = 0; col < n_vars; ++col) {
-                    for (int idx = Astart[col]; idx < Astart[col + 1]; ++idx) {
-                        int row = Aindex[idx];
-                        if (row < n_demands) {
-                            Aindex_SQ.push_back(row);
-                            Avalue_SQ.push_back(Avalue[idx]);
-                        }
-                    }
-                    Astart_SQ[col + 1] = (int)Aindex_SQ.size();
-                }
                 HighsModel model_SQ;
                 model_SQ.lp_.num_col_ = n_vars;
                 model_SQ.lp_.num_row_ = n_machines;
-                model_SQ.lp_.a_matrix_.start_ = Astart_SQ;
-                model_SQ.lp_.a_matrix_.index_ = Aindex_SQ;
-                model_SQ.lp_.a_matrix_.value_ = Avalue_SQ;
+                model_SQ.lp_.a_matrix_.start_ = Astart_sub;
+                model_SQ.lp_.a_matrix_.index_ = Aindex_sub;
+                model_SQ.lp_.a_matrix_.value_ = Avalue_sub;
                 model_SQ.lp_.col_cost_ = c_SQ;
                 model_SQ.lp_.col_lower_ = vector<double>(n_vars, 0.0);
                 model_SQ.lp_.col_upper_ = vector<double>(n_vars, 1.0);
@@ -334,6 +322,6 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getSTOPSolution(
         gamma_k[k_idx] = max_val;
     }
 
-    double elapsed_time = elapsed_time_demands_0 + elapsed_time_c + elapsed_time_alpha_k + elapsed_time_build + max(elapsed_time_relaxed, elapsed_time_b_ub_sub + max(elapsed_time_NQ, elapsed_time_SQ) + elapsed_time_integral);
+    double elapsed_time = elapsed_time_demands_0 + elapsed_time_c + elapsed_time_alpha_k + elapsed_time_build + max(elapsed_time_relaxed, elapsed_time_sub_build + max(elapsed_time_NQ, elapsed_time_SQ) + elapsed_time_integral);
     return make_tuple(x, gamma_k, elapsed_time);
 }
