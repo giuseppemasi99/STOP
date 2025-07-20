@@ -125,6 +125,7 @@ int main(int argc, char* argv[]) {
     oss << "/n_m=" << n_machines << "-max_d=" << max_demands_per_round;
     if (method != "Random" && method != "RoundRobin")
         oss << "/C_avg=" << setprecision(8) << C_avg << "-R_avg=" << setprecision(8) << R_avg;
+    oss << "/id=" << seed;
     string folder_name = oss.str();
 
     Logger logger(folder_name, logger_enabled);
