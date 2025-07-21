@@ -15,7 +15,7 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getLi2024Solution(
     const vector<double>& Q_k, const vector<double>& epsilon_k, const vector<int>& D_k, const vector<double>& const_k,
     double C_avg, double R_avg) 
 {
-
+    
     if (method == "Li2024-AllDemandsExecuted") {
         assert(V == 0 && "Trying to execute Li2024-AllDemandsExecuted with V > 0");
     } else {
@@ -93,8 +93,8 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getLi2024Solution(
         }
         for (int k = 0; k < n_machines; ++k) {
             int start_row = n_demands + k * n_demands * n_models;
-            std::vector<int> rows(n_demands * n_models);
-            std::iota(rows.begin(), rows.end(), start_row);
+            vector<int> rows(n_demands * n_models);
+            iota(rows.begin(), rows.end(), start_row);
             Aindex.insert(Aindex.end(), rows.begin(), rows.end());
             Avalue.insert(Avalue.end(), n_demands * n_models, -1.0);
             Astart[n_x + k + 1] = (int)Aindex.size();
@@ -105,16 +105,19 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getLi2024Solution(
         b_ub.insert(b_ub.end(), n_machines * n_demands * n_models, 0.0);
         if (method == "Li2024-AllDemandsExecuted") {
             b_ub.insert(b_ub.end(), FLOPS_k.begin(), FLOPS_k.end());
-            b_ub.push_back(static_cast<double>(n_demands));
+            b_ub.push_back(static_cast<double>(n_demands) + 1e-6);
         }
         vector<double> b_lb;
-        b_lb.insert(b_lb.end(), n_demands + n_machines * n_demands * n_models, -1.0);
+        b_lb.insert(b_lb.end(), n_demands + n_machines * n_demands * n_models, -kHighsInf);
         if (method == "Li2024-AllDemandsExecuted") {
-            b_lb.insert(b_lb.end(), n_machines, -1.0);
-            b_lb.push_back(static_cast<double>(n_demands));
+            b_lb.insert(b_lb.end(), n_machines, -kHighsInf);
+            b_lb.push_back(static_cast<double>(n_demands) - 1e-6);
         }
         Highs highs;
         highs.setOptionValue("output_flag", false);
+        if (method != "Li2024-AllDemandsExecuted") {
+            highs.setOptionValue("time_limit", 300);
+        }
         HighsModelStatus model_status;
         HighsLp lp;
         lp.num_col_ = n_vars;
@@ -131,16 +134,17 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getLi2024Solution(
         lp.integrality_.assign(n_vars, HighsVarType::kInteger);
         highs.passModel(lp);
         HighsStatus status = highs.run();
-        const vector<double>& sol_relaxed = highs.getSolution().col_value;
+        model_status = highs.getModelStatus();
+        // cout << "Highs model_status: " << highsModelStatusToString(model_status) << endl << endl;
+        const vector<double>& sol_integral = highs.getSolution().col_value;
         for (int k = 0; k < n_machines; ++k) {
             for (int i = 0; i < n_demands; ++i) {
                 for (int j = 0; j < n_models; ++j) {
                     int idx = k * n_demands * n_models + i * n_models + j;
-                    x[k][i][j] = static_cast<int>(round(sol_relaxed[idx]));
+                    x[k][i][j] = static_cast<int>(round(sol_integral[idx]));
                 }
             }
         }
-        
         vector<double> c2;
         for (size_t i = 0; i < k_t.size() - 1; ++i)
             c2.push_back(-k_t[i]);
@@ -233,7 +237,7 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getLi2024Solution(
             for (int d = 0; d < n_demands; ++d) {
                 int assigned = 0;
                 for (int mod = 0; mod < n_models; ++mod) {
-                    assigned = std::max(assigned, x[m][d][mod]);
+                    assigned = max(assigned, x[m][d][mod]);
                 }
                 sum += assigned * sigma[d];
             }
@@ -278,7 +282,7 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getLi2024Solution(
         }
         double eta = 1.7*1e-4;
         for (size_t i = 0; i < k_t.size(); ++i) {
-            k_t[i] = std::max(k_t[i] - eta * d_t[i], 0.0);
+            k_t[i] = max(k_t[i] - eta * d_t[i], 0.0);
         }
 
     }
