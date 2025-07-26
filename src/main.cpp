@@ -146,6 +146,8 @@ int main(int argc, char* argv[]) {
     vector<double> gamma_k;
     double elapsed_time = 0.0;
 
+    string model_status_string = "None";
+
     for (int t = 0; t < T; ++t) {
         uniform_int_distribution<> dist(min_demands_per_round, max_demands_per_round - 1);
         int n_demands = dist(rng_demands);
@@ -169,7 +171,7 @@ int main(int argc, char* argv[]) {
         }
         else if (method.find("Li2024") != string::npos) {
             vector<double> Z_k_const_ = Z_k_const(CI_k, PUE_k, e_k);
-            tie(x, gamma_k, elapsed_time) = getLi2024Solution(
+            tie(x, gamma_k, elapsed_time, model_status_string) = getLi2024Solution(
                 method, V, k_t, n_machines, n_models, n_demands, FLOPS_k, Z_k_const_, 
                 omega, sigma, B_k, P_avg, delta_j, Q_k, epsilon_k, D_k, const_k, C_avg, R_avg
             );
@@ -251,7 +253,6 @@ int main(int argc, char* argv[]) {
         }
         Q_k = update_Q(Q_k, FLOPS_k, x_at_omega);
 
-
         // Store round results in an unordered_map (using nlohmann::json for heterogeneous types)
         unordered_map<string, nlohmann::json> round_result = {
             {"t", t},
@@ -264,7 +265,9 @@ int main(int argc, char* argv[]) {
             {"Q_k", Q_k},
             {"Z_k", Z_k},
             {"W_k", W_k},
-            {"Y", Y}
+            {"Y", Y},
+            {"status", model_status_string}
+
         };
         logger.save_dict(round_result, "t=" + to_string(t) + ".json");
 

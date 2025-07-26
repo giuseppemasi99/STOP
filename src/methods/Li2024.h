@@ -8,7 +8,29 @@
 
 using namespace std;
 
-tuple<vector<vector<vector<int>>>, vector<double>, double> getLi2024Solution(
+string highsModelStatusToString(HighsModelStatus status) {
+    switch (status) {
+        case HighsModelStatus::kNotset: return "Notset";
+        case HighsModelStatus::kLoadError: return "LoadError";
+        case HighsModelStatus::kModelError: return "ModelError";
+        case HighsModelStatus::kPresolveError: return "PresolveError";
+        case HighsModelStatus::kSolveError: return "SolveError";
+        case HighsModelStatus::kPostsolveError: return "PostsolveError";
+        case HighsModelStatus::kModelEmpty: return "ModelEmpty";
+        case HighsModelStatus::kOptimal: return "Optimal";
+        case HighsModelStatus::kInfeasible: return "Infeasible";
+        case HighsModelStatus::kUnboundedOrInfeasible: return "UnboundedOrInfeasible";
+        case HighsModelStatus::kUnbounded: return "Unbounded";
+        case HighsModelStatus::kObjectiveBound: return "ObjectiveBound";
+        case HighsModelStatus::kObjectiveTarget: return "ObjectiveTarget";
+        case HighsModelStatus::kTimeLimit: return "TimeLimit";
+        case HighsModelStatus::kIterationLimit: return "IterationLimit";
+        case HighsModelStatus::kUnknown: return "Unknown";
+        default: return "Unknown";
+    }
+}
+
+tuple<vector<vector<vector<int>>>, vector<double>, double, string> getLi2024Solution(
     const string& method, double V, vector<double>& k_t, int n_machines, int n_models, int n_demands,
     const vector<double>& FLOPS_k, const vector<double>& Z_k_const_, const vector<vector<double>>& omega, 
     const vector<double>& sigma, const vector<double>& B_k, double P_avg, const vector<double>& delta_j,
@@ -27,6 +49,7 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getLi2024Solution(
     // 3D assignment: [n_machines][n_demands][n_models]
     vector<vector<vector<int>>> x(n_machines, vector<vector<int>>(n_demands, vector<int>(n_models, 0)));
     vector<double> gamma_k(n_machines, 0.0);
+    string model_status_string = "NotRun";
 
     if (n_demands > 0){
 
@@ -116,7 +139,7 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getLi2024Solution(
         Highs highs;
         highs.setOptionValue("output_flag", false);
         if (method != "Li2024-AllDemandsExecuted") {
-            highs.setOptionValue("time_limit", 300);
+            highs.setOptionValue("time_limit", 600);
         }
         HighsModelStatus model_status;
         HighsLp lp;
@@ -135,7 +158,7 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getLi2024Solution(
         highs.passModel(lp);
         HighsStatus status = highs.run();
         model_status = highs.getModelStatus();
-        // cout << "Highs model_status: " << highsModelStatusToString(model_status) << endl << endl;
+        model_status_string = highsModelStatusToString(model_status);
         const vector<double>& sol_integral = highs.getSolution().col_value;
         for (int k = 0; k < n_machines; ++k) {
             for (int i = 0; i < n_demands; ++i) {
@@ -145,6 +168,7 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getLi2024Solution(
                 }
             }
         }
+
         vector<double> c2;
         for (size_t i = 0; i < k_t.size() - 1; ++i)
             c2.push_back(-k_t[i]);
@@ -289,5 +313,5 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getLi2024Solution(
 
     auto end = chrono::high_resolution_clock::now();
     double elapsed_time = chrono::duration<double>(end - start).count();
-    return make_tuple(x, gamma_k, elapsed_time);
+    return make_tuple(x, gamma_k, elapsed_time, model_status_string);
 }

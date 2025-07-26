@@ -22,12 +22,7 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getSTOPSolution(
     vector<vector<vector<int>>> x(n_machines, vector<vector<int>>(n_demands, vector<int>(n_models, 0)));
     vector<double> gamma_k(n_machines, 0.0);
 
-    double Y_coefficient;
-    if (n_models == 3){
-        Y_coefficient = 200.0;
-    } else {
-        Y_coefficient = 1000.0;
-    }
+    double Y_coefficient = 1000.0;
 
     double elapsed_time_demands_0 = 0.0;
     double elapsed_time_c = 0.0;
