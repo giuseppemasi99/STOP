@@ -162,7 +162,6 @@ int main(int argc, char* argv[]) {
         uniform_int_distribution<> dist(min_demands_per_round, max_demands_per_round - 1);
         int n_demands = dist(rng_demands);
         if (t > 290) n_demands = 0;
-        cout << "Round " << t + 1 << ": " << n_demands << " demands" << endl;
 
         for (int i = 0; i < n_demands; ++i) {
             id2t_arrival[id] = t;
@@ -233,6 +232,7 @@ int main(int argc, char* argv[]) {
 
         vector<double> emission_k = c_k(CI_k, PUE_k, e_k, x_at_omega);  // gCO2
         vector<double> response_time_k = R_k(x_at_sigma, B_k, epsilon_k, D_k, const_k, gamma_k, x_at_omega, FLOPS_k, Q_k);  // s
+
         double performance;
         int total_assignments = 0;
         double weighted_sum = 0.0;
@@ -284,6 +284,23 @@ int main(int argc, char* argv[]) {
         }
         vector<int> ids;
         for (const auto& pair : id2t_arrival) ids.push_back(pair.first);
+
+        for (int k = 0; k < n_machines; ++k) {
+            int executed = 0;
+            double penalty = 0.0;
+            int n = 0;
+            for (int i = 0; i < n_demands; ++i) {
+                for (int j = 0; j < n_models; ++j) {
+                    executed += x[k][i][j];
+                }
+                if (demands_executed[i] == 1) {
+                    penalty += (t - id2t_arrival[ids[i]]); 
+                    n++;
+                }    
+            }
+            if (n > 0) response_time_k[k] += penalty / n;
+        }
+
         for (int i = 0; i < n_demands; ++i) {
             if (demands_executed[i] == 0) {
                 sizes_not_executed.push_back(sizes[i]);
