@@ -4,6 +4,7 @@
 #include <chrono>
 #include <set>
 #include <tuple>
+#include <map>
 
 using namespace std;
 using namespace chrono;
@@ -15,7 +16,8 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getSTOPSolution(
     const vector<double>& W_k, const vector<double>& FLOPS_k, double R_avg, const vector<double>& Q_k,
     const vector<double>& sigma, const vector<double>& B_k,
     double Y, const vector<double>& delta_j, double P_avg,
-    const vector<double>& eta_k, const vector<double>& alpha_k, double normalization_constant
+    const vector<double>& eta_k, const vector<double>& alpha_k, double normalization_constant,
+    double dispatcher_vq, const map<int, int>& id2t_arrival, int t
 ) {
     auto start = high_resolution_clock::now();
 
@@ -36,6 +38,10 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getSTOPSolution(
 
     if (n_demands > 0){
         auto start_c = high_resolution_clock::now();
+
+        vector<int> ids;
+        for (const auto& pair : id2t_arrival) ids.push_back(pair.first);
+
         vector<double> c;
         // x_{k,i,j} terms
         for (int k = 0; k < n_machines; ++k) {
@@ -47,14 +53,15 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getSTOPSolution(
                         + (Q_k[k] / normalization_constant))
                         + W_k[k] * 100.0 * sigma[i] / (B_k[k] * R_avg)
                         + Y_coefficient * Y * (P_avg - delta_j[j]) / (n_demands * P_avg);
-                        c.push_back(val);
-                    }
+                    val += -dispatcher_vq * (t - id2t_arrival.at(ids[i]));
+                    c.push_back(val);
                 }
             }
-            // gamma_k terms
-            for (int k = 0; k < n_machines; ++k) {
-                c.push_back(eta_k[k] * 100.0 / R_avg);
-            }
+        }
+        // gamma_k terms
+        for (int k = 0; k < n_machines; ++k) {
+            c.push_back(eta_k[k] * 100.0 / R_avg);
+        }
         auto end_c = high_resolution_clock::now();
         elapsed_time_c = duration<double>(end_c - start_c).count();
 

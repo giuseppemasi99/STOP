@@ -101,6 +101,8 @@ int main(int argc, char* argv[]) {
     double P_avg_original = model->get_P_avg();
     double P_avg = (method.find("STOP") != string::npos) ? 50.0 : P_avg_original;
 
+    double dispatcher_vq = 0.0;
+
     unordered_map<string, nlohmann::json> params;
     params["seed"] = seed;
     params["method"] = method;
@@ -121,7 +123,7 @@ int main(int argc, char* argv[]) {
     params["R_avg"] = R_avg;
 
     ostringstream oss;
-    oss << "results_new/" << model_name << "/" << method;
+    oss << "results_retry/" << model_name << "/" << method;
     if (method != "Random" && method != "RoundRobin" && method != "Li2024-AllDemandsExecuted")
         oss << "-V=" << V;
     oss << "/n_m=" << n_machines << "-max_d=" << max_demands_per_round;
@@ -159,6 +161,7 @@ int main(int argc, char* argv[]) {
 
         uniform_int_distribution<> dist(min_demands_per_round, max_demands_per_round - 1);
         int n_demands = dist(rng_demands);
+        if (t > 290) n_demands = 0;
         cout << "Round " << t + 1 << ": " << n_demands << " demands" << endl;
 
         for (int i = 0; i < n_demands; ++i) {
@@ -183,7 +186,8 @@ int main(int argc, char* argv[]) {
             vector<double> eta_k = eta(W_k, epsilon_k, D_k, const_k, Q_k, FLOPS_k);
             tie(x, gamma_k, elapsed_time) = getSTOPSolution(
                 n_machines, n_demands, n_models, V, omega, Z_k, CI_k, PUE_k, e_k, C_avg, W_k, FLOPS_k, 
-                R_avg, Q_k, sigma, B_k, Y, delta_j, P_avg, eta_k, alpha_k, normalization_constant    
+                R_avg, Q_k, sigma, B_k, Y, delta_j, P_avg, eta_k, alpha_k, normalization_constant,
+                dispatcher_vq, id2t_arrival, t
             );
         }
         else if (method.find("Li2024") != string::npos) {
@@ -278,7 +282,6 @@ int main(int argc, char* argv[]) {
                 }
             }
         }
-        
         vector<int> ids;
         for (const auto& pair : id2t_arrival) ids.push_back(pair.first);
         for (int i = 0; i < n_demands; ++i) {
@@ -288,6 +291,14 @@ int main(int argc, char* argv[]) {
                 id2t_arrival.erase(ids[i]);
             }
         }
+        
+        double dis = 0.0;
+        for (const auto& pair : id2t_arrival){
+            int t_arrival = pair.second;
+            dis += (t - t_arrival);
+        }
+        dis -= 1;
+        dispatcher_vq = max(0.0, dispatcher_vq + dis);
 
         // Store round results in an unordered_map (using nlohmann::json for heterogeneous types)
         unordered_map<string, nlohmann::json> round_result = {
