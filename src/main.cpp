@@ -35,7 +35,13 @@ int main(int argc, char* argv[]) {
 
     unique_ptr<Model> model;
     if (model_name == "Yolo") model = make_unique<Yolo>();
-    else model = make_unique<Whisper>();
+    else if (model_name == "Whisper") {
+        model = make_unique<Whisper>();
+    } else if (model_name == "Whisper3") {
+        model = make_unique<WhisperThreeModels>();
+    } else {
+        throw runtime_error("Unknown model: " + model_name);
+    }
 
     int n_models = model->get_n_models();
     double normalization_constant = model->normalization_constant(max_demands_per_round, n_machines);

@@ -52,7 +52,6 @@ tuple<vector<vector<vector<int>>>, vector<double>, double, string> getLi2024Solu
     string model_status_string = "NotRun";
 
     if (n_demands > 0){
-
         vector<double> c;
         for (int k = 0; k < n_machines; ++k) {
             for (int i = 0; i < n_demands; ++i) {
@@ -138,9 +137,9 @@ tuple<vector<vector<vector<int>>>, vector<double>, double, string> getLi2024Solu
         }
         Highs highs;
         highs.setOptionValue("output_flag", false);
-        if (method != "Li2024-AllDemandsExecuted") {
-            highs.setOptionValue("time_limit", 600);
-        }
+        // if (method != "Li2024-AllDemandsExecuted") {
+        //     highs.setOptionValue("time_limit", 600);
+        // }
         HighsModelStatus model_status;
         HighsLp lp;
         lp.num_col_ = n_vars;
