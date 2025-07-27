@@ -148,12 +148,20 @@ int main(int argc, char* argv[]) {
 
     string model_status_string = "None";
 
+    vector<int> sizes_not_executed;
+
     for (int t = 0; t < T; ++t) {
+        int n_not_executed = sizes_not_executed.size();
+
         uniform_int_distribution<> dist(min_demands_per_round, max_demands_per_round - 1);
         int n_demands = dist(rng_demands);
         cout << "Round " << t + 1 << ": " << n_demands << " demands" << endl;
-        
+
         vector<int> sizes = model->get_sizes(n_demands, rng_sizes);
+        n_demands += n_not_executed;
+        sizes.insert(sizes.end(), sizes_not_executed.begin(), sizes_not_executed.end());
+        sizes_not_executed.clear();
+
         vector<double> sigma = model->get_sigma(sizes);
         vector<vector<double>> omega = model->get_omega(sizes);
 
@@ -252,6 +260,20 @@ int main(int argc, char* argv[]) {
             Y = update_Y_Perc(Y, x_at_delta, n_demands, P_avg);
         }
         Q_k = update_Q(Q_k, FLOPS_k, x_at_omega);
+        
+        vector<int> demands_executed(n_demands, 0);
+        for (int k = 0; k < n_machines; ++k) {
+            for (int i = 0; i < n_demands; ++i) {
+                for (int j = 0; j < n_models; ++j) {
+                    demands_executed[i] = max(demands_executed[i], x[k][i][j]);
+                }
+            }
+        }
+        for (int i = 0; i < n_demands; ++i) {
+            if (demands_executed[i] == 0) {
+                sizes_not_executed.push_back(sizes[i]);
+            }
+        }
 
         // Store round results in an unordered_map (using nlohmann::json for heterogeneous types)
         unordered_map<string, nlohmann::json> round_result = {
