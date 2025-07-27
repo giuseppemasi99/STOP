@@ -11,6 +11,7 @@
 #include <memory>
 #include <random>
 #include <unordered_map>
+#include <map>
 #include <sstream>
 #include <iomanip>
 
@@ -150,6 +151,9 @@ int main(int argc, char* argv[]) {
 
     vector<int> sizes_not_executed;
 
+    int id = 0;
+    map<int, int> id2t_arrival;
+
     for (int t = 0; t < T; ++t) {
         int n_not_executed = sizes_not_executed.size();
 
@@ -157,9 +161,14 @@ int main(int argc, char* argv[]) {
         int n_demands = dist(rng_demands);
         cout << "Round " << t + 1 << ": " << n_demands << " demands" << endl;
 
+        for (int i = 0; i < n_demands; ++i) {
+            id2t_arrival[id] = t;
+            id++;
+        }
+
         vector<int> sizes = model->get_sizes(n_demands, rng_sizes);
         n_demands += n_not_executed;
-        sizes.insert(sizes.end(), sizes_not_executed.begin(), sizes_not_executed.end());
+        sizes.insert(sizes.begin(), sizes_not_executed.begin(), sizes_not_executed.end());
         sizes_not_executed.clear();
 
         vector<double> sigma = model->get_sigma(sizes);
@@ -269,9 +278,14 @@ int main(int argc, char* argv[]) {
                 }
             }
         }
+        
+        vector<int> ids;
+        for (const auto& pair : id2t_arrival) ids.push_back(pair.first);
         for (int i = 0; i < n_demands; ++i) {
             if (demands_executed[i] == 0) {
                 sizes_not_executed.push_back(sizes[i]);
+            } else {
+                id2t_arrival.erase(ids[i]);
             }
         }
 
