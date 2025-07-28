@@ -321,6 +321,7 @@ int main(int argc, char* argv[]) {
         unordered_map<string, nlohmann::json> round_result = {
             {"t", t},
             {"arrivals", n_demands},
+            {"not_executed", n_not_executed},
             {"throughput", throughput},
             {"elapsed_time", elapsed_time},
             {"emission_k", emission_k},
