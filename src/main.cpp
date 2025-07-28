@@ -156,8 +156,20 @@ int main(int argc, char* argv[]) {
     int id = 0;
     map<int, int> id2t_arrival;
 
+    int overall_max_diff = -1;
+
     for (int t = 0; t < T; ++t) {
         int n_not_executed = sizes_not_executed.size();
+
+        int max_diff = -1;
+        for (const auto& pair : id2t_arrival) {
+            int t_arrival = pair.second;
+            int diff = t - t_arrival;
+            if (diff > max_diff) {
+                max_diff = diff;
+            }
+        }
+        if (max_diff > overall_max_diff) overall_max_diff = max_diff;
 
         uniform_int_distribution<> dist(min_demands_per_round, max_demands_per_round - 1);
         int n_demands = dist(rng_demands);
@@ -337,6 +349,9 @@ int main(int argc, char* argv[]) {
         logger.save_dict(round_result, "t=" + to_string(t) + ".json");
 
     }
+
+    ofstream max_diff_file(folder_name + "/max_diff.txt");
+    max_diff_file << overall_max_diff << endl;
 
     return 0;
 
