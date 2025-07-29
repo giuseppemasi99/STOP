@@ -35,29 +35,6 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getSTOPSolution(
     double elapsed_time_integral = 0.0;
 
     if (n_demands > 0){
-        auto start_c = high_resolution_clock::now();
-        vector<double> c;
-        // x_{k,i,j} terms
-        for (int k = 0; k < n_machines; ++k) {
-            for (int i = 0; i < n_demands; ++i) {
-                for (int j = 0; j < n_models; ++j) {
-                    double val = -V
-                        + omega[i][j] * (Z_k[k] * 1e-3 * CI_k[k] * PUE_k[k] * e_k[k] * 100.0 / C_avg
-                        + 100.0 * W_k[k] / (FLOPS_k[k] * R_avg)
-                        + (Q_k[k] / normalization_constant))
-                        + W_k[k] * 100.0 * sigma[i] / (B_k[k] * R_avg)
-                        + Y_coefficient * Y * (P_avg - delta_j[j]) / (n_demands * P_avg);
-                        c.push_back(val);
-                    }
-                }
-            }
-            // gamma_k terms
-            for (int k = 0; k < n_machines; ++k) {
-                c.push_back(eta_k[k] * 100.0 / R_avg);
-            }
-        auto end_c = high_resolution_clock::now();
-        elapsed_time_c = duration<double>(end_c - start_c).count();
-
         auto start_alpha_k = high_resolution_clock::now();
         auto it = find(alpha_k.begin(), alpha_k.end(), 0.0);
 
@@ -81,6 +58,28 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getSTOPSolution(
             elapsed_time_alpha_k = duration<double>(end_alpha_k - start_alpha_k).count();
 
         } else {
+            auto start_c = high_resolution_clock::now();
+            vector<double> c;
+            // x_{k,i,j} terms
+            for (int k = 0; k < n_machines; ++k) {
+                for (int i = 0; i < n_demands; ++i) {
+                    for (int j = 0; j < n_models; ++j) {
+                        double val = -V
+                            + omega[i][j] * (Z_k[k] * 1e-3 * CI_k[k] * PUE_k[k] * e_k[k] * 100.0 / C_avg
+                            + 100.0 * W_k[k] / (FLOPS_k[k] * R_avg)
+                            + (Q_k[k] / normalization_constant))
+                            + W_k[k] * 100.0 * sigma[i] / (B_k[k] * R_avg)
+                            + Y_coefficient * Y * (P_avg - delta_j[j]) / (n_demands * P_avg);
+                            c.push_back(val);
+                    }
+                }
+            }
+            // gamma_k terms
+            for (int k = 0; k < n_machines; ++k) {
+                c.push_back(eta_k[k] * 100.0 / R_avg);
+            }
+            auto end_c = high_resolution_clock::now();
+            elapsed_time_c = duration<double>(end_c - start_c).count();
 
             Highs highs;
             highs.setOptionValue("output_flag", false);
@@ -112,7 +111,6 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getSTOPSolution(
                 Avalue.insert(Avalue.end(), n_demands * n_models, -1.0);
                 Astart[n_x + k + 1] = (int)Aindex.size();
             }
-
             vector<double> b_ub;
             b_ub.insert(b_ub.end(), n_demands, 1.0);
             b_ub.insert(b_ub.end(), n_machines * n_demands * n_models, 0.0);
@@ -289,7 +287,7 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getSTOPSolution(
                     model_integral.lp_.col_upper_ = vector<double>(n_vars, 1.0);
                     model_integral.lp_.row_lower_ = b_lb;
                     model_integral.lp_.row_upper_ = b_ub;
-                    model_integral.lp_.integrality_.assign(n_vars, HighsVarType::kContinuous);
+                    model_integral.lp_.integrality_.assign(n_vars, HighsVarType::kInteger);
                     for (int idx = 0; idx < n_vars; ++idx) {
                         model_integral.lp_.integrality_[idx] = HighsVarType::kInteger;
                     }
@@ -326,6 +324,8 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getSTOPSolution(
         gamma_k[k_idx] = max_val;
     }
 
-    double elapsed_time = elapsed_time_demands_0 + elapsed_time_c + elapsed_time_alpha_k + elapsed_time_build + max(elapsed_time_relaxed, elapsed_time_sub_build + max(elapsed_time_NQ, elapsed_time_SQ) + elapsed_time_integral);
+    double elapsed_time = elapsed_time_demands_0 + 
+        elapsed_time_alpha_k + elapsed_time_c + elapsed_time_build + 
+        max(elapsed_time_relaxed, elapsed_time_sub_build + max(elapsed_time_NQ, elapsed_time_SQ) + elapsed_time_integral);
     return make_tuple(x, gamma_k, elapsed_time);
 }
