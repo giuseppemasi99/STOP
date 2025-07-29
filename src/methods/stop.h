@@ -296,7 +296,6 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getSTOPSolution(
                     model_integral.lp_.col_upper_ = vector<double>(n_vars, 1.0);
                     model_integral.lp_.row_lower_ = b_lb;
                     model_integral.lp_.row_upper_ = b_ub;
-                    model_integral.lp_.integrality_.assign(n_vars, HighsVarType::kContinuous);
                     for (int idx = 0; idx < n_vars; ++idx) {
                         model_integral.lp_.integrality_[idx] = HighsVarType::kInteger;
                     }
