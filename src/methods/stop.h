@@ -19,6 +19,8 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getSTOPSolution(
 ) {
     auto start = high_resolution_clock::now();
 
+    auto global_start = high_resolution_clock::now();
+
     vector<vector<vector<int>>> x(n_machines, vector<vector<int>>(n_demands, vector<int>(n_models, 0)));
     vector<double> gamma_k(n_machines, 0.0);
 
@@ -315,6 +317,9 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getSTOPSolution(
         elapsed_time_demands_0 = duration<double>(end_demands_0 - start).count();
     }
 
+    auto global_end = high_resolution_clock::now();
+    double elapsed_time_global = duration<double>(global_end - global_start).count();
+
     for (int k_idx = 0; k_idx < n_machines; ++k_idx) {
         int max_val = 0;
         for (int i = 0; i < n_demands; ++i)
@@ -326,5 +331,5 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getSTOPSolution(
     double elapsed_time = elapsed_time_demands_0 + 
         elapsed_time_alpha_k + elapsed_time_c + elapsed_time_build + 
         max(elapsed_time_relaxed, elapsed_time_sub_build + max(elapsed_time_NQ, elapsed_time_SQ) + elapsed_time_integral);
-    return make_tuple(x, gamma_k, elapsed_time);
+    return make_tuple(x, gamma_k, elapsed_time_global);
 }
