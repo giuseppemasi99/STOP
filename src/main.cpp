@@ -173,7 +173,7 @@ int main(int argc, char* argv[]) {
 
         uniform_int_distribution<> dist(min_demands_per_round, max_demands_per_round - 1);
         int n_demands = dist(rng_demands);
-        if (t > 290) n_demands = 0;
+        // if (t > 290) n_demands = 0;
 
         for (int i = 0; i < n_demands; ++i) {
             id2t_arrival[id] = t;
