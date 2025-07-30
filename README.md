@@ -1,4 +1,4 @@
-# STOP! A Solution for Sustainable and Geo-Distributed AI Inference
+# Sustainable Geo-Distributed AI Inference
 
 
 ### Installing Highs solver
