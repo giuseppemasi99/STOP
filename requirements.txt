@@ -1,0 +1,9 @@
+numpy
+matplotlib
+tqdm
+torch
+ultralytics
+torch_operation_counter
+transformers
+datasets
+ptflops
