@@ -7,3 +7,4 @@ data/
 runs_yolo/
 storage/
 *.sh
+*zip
