@@ -126,7 +126,7 @@ int main(int argc, char* argv[]) {
     params["R_avg"] = R_avg;
 
     ostringstream oss;
-    oss << "results_new/" << model_name << "/" << method;
+    oss << "results/" << model_name << "/" << method;
     if (method != "Random" && method != "RoundRobin" && method != "Li2024-AllDemandsExecuted")
         oss << "-V=" << V;
     oss << "/n_m=" << n_machines << "-max_d=" << max_demands_per_round;
@@ -259,7 +259,6 @@ int main(int argc, char* argv[]) {
         }
         Q_k = update_Q(Q_k, FLOPS_k, x_at_omega);
 
-        // Store round results in an unordered_map (using nlohmann::json for heterogeneous types)
         unordered_map<string, nlohmann::json> round_result = {
             {"t", t},
             {"arrivals", n_demands},
