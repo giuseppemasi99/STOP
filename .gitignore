@@ -3,5 +3,7 @@ build*/
 results*/
 params/
 plots/
+data/
+runs_yolo/
+storage/
 *.sh
-*txt
