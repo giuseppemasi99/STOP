@@ -5,3 +5,6 @@ params/
 plots/
 *.sh
 *txt
+data
+storage
+runs_yolo
