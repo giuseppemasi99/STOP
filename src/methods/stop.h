@@ -17,7 +17,7 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getSTOPSolution(
     const vector<double>& sigma, const vector<double>& B_k,
     double Y, const vector<double>& delta_j, double P_avg,
     const vector<double>& eta_k, const vector<double>& alpha_k, double normalization_constant,
-    double dispatcher_vq, const map<int, int>& id2t_arrival, int t
+    const map<int, int>& id2t_arrival, int t
 ) {
     auto start = high_resolution_clock::now();
 
@@ -52,8 +52,8 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getSTOPSolution(
                         + 100.0 * W_k[k] / (FLOPS_k[k] * R_avg)
                         + (Q_k[k] / normalization_constant))
                         + W_k[k] * 100.0 * sigma[i] / (B_k[k] * R_avg)
+                        + W_k[k] * (-t + id2t_arrival.at(ids[i])) 
                         + Y_coefficient * Y * (P_avg - delta_j[j]) / (n_demands * P_avg);
-                    val += -dispatcher_vq * (t - id2t_arrival.at(ids[i]));
                     c.push_back(val);
                 }
             }

@@ -101,8 +101,6 @@ int main(int argc, char* argv[]) {
     double P_avg_original = model->get_P_avg();
     double P_avg = (method.find("STOP") != string::npos) ? 50.0 : P_avg_original;
 
-    double dispatcher_vq = 0.0;
-
     unordered_map<string, nlohmann::json> params;
     params["seed"] = seed;
     params["method"] = method;
@@ -197,8 +195,7 @@ int main(int argc, char* argv[]) {
             vector<double> eta_k = eta(W_k, epsilon_k, D_k, const_k, Q_k, FLOPS_k);
             tie(x, gamma_k, elapsed_time) = getSTOPSolution(
                 n_machines, n_demands, n_models, V, omega, Z_k, CI_k, PUE_k, e_k, C_avg, W_k, FLOPS_k, 
-                R_avg, Q_k, sigma, B_k, Y, delta_j, P_avg, eta_k, alpha_k, normalization_constant,
-                dispatcher_vq, id2t_arrival, t
+                R_avg, Q_k, sigma, B_k, Y, delta_j, P_avg, eta_k, alpha_k, normalization_constant, id2t_arrival, t
             );
         }
         else if (method.find("Li2024") != string::npos) {
@@ -321,13 +318,7 @@ int main(int argc, char* argv[]) {
             }
         }
         
-        double dis = 0.0;
-        for (const auto& pair : id2t_arrival){
-            int t_arrival = pair.second;
-            dis += (t - t_arrival);
-        }
-        dis -= 1;
-        dispatcher_vq = max(0.0, dispatcher_vq + dis);
+        
 
         // Store round results in an unordered_map (using nlohmann::json for heterogeneous types)
         unordered_map<string, nlohmann::json> round_result = {
