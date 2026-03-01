@@ -51,7 +51,7 @@ int main(int argc, char* argv[]) {
 
     // Carbon emission model
     // grams of CO2 equivalent per KWh  [Italy 331, France 56, Germany 381, Spain 174]
-    vector<int> CI_options = {56, 331, 381, 174};
+    vector<int> CI_options = {56, 331, 381, 174}; 
     vector<int> CI_k(n_machines);
     mt19937 rng_CI(seed);
     uniform_int_distribution<> dist(0, CI_options.size() - 1);
@@ -155,6 +155,13 @@ int main(int argc, char* argv[]) {
     string model_status_string = "None";
 
     for (int t = 0; t < T; ++t) {
+
+        // time-varying response time
+        // read new bandwidth from file "residuals" 
+        
+
+
+
         uniform_int_distribution<> dist(min_demands_per_round, max_demands_per_round - 1);
         int n_demands = dist(rng_demands);
         cout << "Round " << t + 1 << ": " << n_demands << " demands" << endl;
