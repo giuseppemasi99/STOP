@@ -6,6 +6,7 @@
 #include "methods/stop.h"
 #include "methods/Li2024.h"
 #include "logger.h"
+#include "gt_utils.h"
 #include <iostream>
 #include <string>
 #include <memory>
@@ -13,6 +14,7 @@
 #include <unordered_map>
 #include <sstream>
 #include <iomanip>
+
 
 using namespace std;
 
@@ -156,11 +158,6 @@ int main(int argc, char* argv[]) {
 
     for (int t = 0; t < T; ++t) {
 
-        // time-varying response time
-        // read new bandwidth from file "residuals" 
-        
-
-
 
         uniform_int_distribution<> dist(min_demands_per_round, max_demands_per_round - 1);
         int n_demands = dist(rng_demands);
@@ -260,6 +257,8 @@ int main(int argc, char* argv[]) {
         }
 
         if (method.find("STOP") != string::npos) {
+            // read B_k's 
+            B_k = query_residuals("../residuals.json", t, n_machines);
             Z_k = update_Z_Perc(Z_k, CI_k, PUE_k, e_k, x_at_omega, C_avg);
             W_k = update_W_Perc(W_k, x_at_sigma, B_k, epsilon_k, D_k, const_k, gamma_k, x_at_omega, FLOPS_k, Q_k, R_avg);
             Y = update_Y_Perc(Y, x_at_delta, n_demands, P_avg);

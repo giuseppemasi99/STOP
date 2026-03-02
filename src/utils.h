@@ -1,4 +1,5 @@
 #include <vector>
+#include <random>
 
 using namespace std;
 
@@ -80,7 +81,11 @@ inline vector<double> R_k(
     for (size_t k = 0; k < comm.size(); ++k) {
         result[k] = comm[k] + proc[k] + queue[k];
     }
-    return result;
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<double> dist(-1.0, 1.0);
+    double random_err = dist(gen)
+    return result + random_err;
 }
 
 vector<double> update_W_Perc(
