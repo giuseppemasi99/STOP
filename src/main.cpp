@@ -158,7 +158,6 @@ int main(int argc, char* argv[]) {
 
     for (int t = 0; t < T; ++t) {
 
-
         uniform_int_distribution<> dist(min_demands_per_round, max_demands_per_round - 1);
         int n_demands = dist(rng_demands);
         cout << "Round " << t + 1 << ": " << n_demands << " demands" << endl;

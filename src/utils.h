@@ -73,7 +73,8 @@ inline vector<double> R_k(
     const vector<double>& gamma_k,
     const vector<double>& x_at_omega,
     const vector<double>& FLOPS_k,
-    const vector<double>& Q_k) {
+    const vector<double>& Q_k
+) {
     auto comm = d_k_comm(x_at_sigma, B_k, epsilon_k, D_k, const_k, gamma_k);
     auto proc = d_k_proc(x_at_omega, FLOPS_k);
     auto queue = d_k_queue(Q_k, FLOPS_k, gamma_k);

@@ -8,3 +8,6 @@ storage
 runs_yolo
 *zip
 geant
+weights/
+runs/
+_INFOCOM26__STOP.pdf
