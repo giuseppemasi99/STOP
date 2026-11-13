@@ -138,11 +138,16 @@ vector<double> update_Z_Perc(
 }
 
 // Performance virtual queue update
-double update_Y_Perc(double Y, double x_at_delta, int n_demands, double P_avg) {
+double update_Y_Perc(
+    double Y,
+    double x_at_delta,
+    int n_demands,
+    double accuracy_normalization
+) {
     if (n_demands == 0) {
         return Y;
     }
-    return max(Y + (x_at_delta * 100.0) / (n_demands * P_avg), 0.0);
+    return max(Y + (x_at_delta * 100.0) / (n_demands * accuracy_normalization), 0.0);
 }
 
 vector<double> alpha(

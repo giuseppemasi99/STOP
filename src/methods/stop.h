@@ -15,7 +15,7 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getSTOPSolution(
     const vector<double>& W_k, const vector<double>& FLOPS_k, double R_avg, const vector<double>& Q_k,
     const vector<double>& sigma, const vector<double>& B_k,
     double Y, const vector<double>& delta_j, double P_avg,
-    const vector<double>& eta_k, const vector<double>& alpha_k, double normalization_constant
+    const vector<double>& eta_k, const vector<double>& alpha_k, double normalization_constant, double accuracy_normalization = 50.0
 ) {
     auto start = high_resolution_clock::now();
 
@@ -71,7 +71,7 @@ tuple<vector<vector<vector<int>>>, vector<double>, double> getSTOPSolution(
                             + 100.0 * W_k[k] / (FLOPS_k[k] * R_avg)
                             + (Q_k[k] / normalization_constant))
                             + W_k[k] * 100.0 * sigma[i] / (B_k[k] * R_avg)
-                            + Y_coefficient * Y * (P_avg - delta_j[j]) / (n_demands * P_avg);
+                            + Y_coefficient * Y * (P_avg - delta_j[j]) / (n_demands * accuracy_normalization);
                             c.push_back(val);
                     }
                 }

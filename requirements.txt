@@ -7,3 +7,7 @@ torch_operation_counter
 transformers
 datasets
 ptflops
+Pillow
+ultralytics-thop
+soundfile
+jiwer

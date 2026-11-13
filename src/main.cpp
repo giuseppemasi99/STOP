@@ -1,6 +1,7 @@
 #include "argparse.h"
 #include "utils.h"
 #include "model/model.h"
+#include "model/performance.h"
 #include "methods/random.h"
 #include "methods/roundrobin.h"
 #include "methods/stop.h"
@@ -23,13 +24,14 @@ int main(int argc, char* argv[]) {
 
     string method = parser.get("method");
     string model_name = parser.get("model_name");
+    string demands_json = parser.get("demands_json");
     double V = parser.get_double("V");
     int n_machines = parser.get_int("n_machines");
     int max_demands_per_round = parser.get_int("max_demands_per_round");
     double C_avg = parser.get_double("C_avg");
     double R_avg = parser.get_double("R_avg");
     int seed = parser.get_int("seed");
-    int min_demands_per_round = 0;
+    int min_demands_per_round = parser.get_int("min_demands_per_round", 10);
 
     bool logger_enabled = true;
 
@@ -45,8 +47,28 @@ int main(int argc, char* argv[]) {
         throw runtime_error("Unknown model: " + model_name);
     }
 
+    unique_ptr<DemandDataset> demand_dataset;
+    if (!demands_json.empty()) {
+        demand_dataset = make_unique<DemandDataset>(demands_json, model_name);
+    }
+    if (n_machines <= 0 || min_demands_per_round < 0 || max_demands_per_round <= min_demands_per_round)
+        throw invalid_argument("Require n_machines > 0 and 0 <= min_demands_per_round < max_demands_per_round");
+
     int n_models = model->get_n_models();
     double normalization_constant = model->normalization_constant(max_demands_per_round, n_machines);
+
+    normalization_constant *= (min_demands_per_round + max_demands_per_round - 1.0) / max_demands_per_round;
+    if (demand_dataset) {
+        // Use the same model weighting as each synthetic workload's normalization.
+        double mean_cost = 0.0;
+        if (model_name == "Yolo") {
+            mean_cost = demand_dataset->mean_gflops(1);
+        } else {
+            for (int j = 0; j < n_models; ++j)
+                mean_cost += demand_dataset->mean_gflops(j) / n_models;
+        }
+        normalization_constant = mean_cost * ((min_demands_per_round + max_demands_per_round - 1.0) / 2.0) / n_machines;
+    }
 
     // Real queue
     vector<double> Q_k(n_machines, 0.0);
@@ -106,12 +128,24 @@ int main(int argc, char* argv[]) {
     double Y = 0.0;
     vector<double> delta_j_original = model->get_delta_j_original();
     double P_avg_original = model->get_P_avg();
-    double P_avg = (method.find("STOP") != string::npos) ? 50.0 : P_avg_original;
+    const bool scaled_performance = method.find("STOP") != string::npos;
+    if (demand_dataset) {
+        delta_j_original = demand_dataset->mean_performance();
+        P_avg_original = accumulate(delta_j_original.begin(), delta_j_original.end(), 0.0) / n_models;
+    }
+    double P_avg = scaled_performance ? model->scale_performance(P_avg_original) : P_avg_original;
+    // The extrapolated target may be zero or negative. Keep a fixed positive
+    // normalization so its sign never reverses the accuracy feedback.
+    const double accuracy_normalization = 50.0;
+    vector<double> delta_j = delta_j_original;
+    if (scaled_performance)
+        for (auto& score : delta_j) score = model->scale_performance(score);
 
     unordered_map<string, nlohmann::json> params;
     params["seed"] = seed;
     params["method"] = method;
     params["model_name"] = model_name;
+    if (demand_dataset) params["demands_json"] = demands_json;
     params["V"] = V;
     params["n_machines"] = n_machines;
     params["min_demands_per_round"] = min_demands_per_round;
@@ -126,6 +160,11 @@ int main(int argc, char* argv[]) {
     params["D_k"] = D_k;
     params["const_k"] = const_k;
     params["R_avg"] = R_avg;
+    params["delta_j_original"] = delta_j_original;
+    params["delta_j"] = delta_j;
+    params["P_avg_original"] = P_avg_original;
+    params["P_avg"] = P_avg;
+    params["accuracy_normalization"] = accuracy_normalization;
 
     ostringstream oss;
     oss << "results/" << model_name << "/" << method;
@@ -140,7 +179,6 @@ int main(int argc, char* argv[]) {
     Logger logger(folder_name, logger_enabled);
     logger.save_dict(params, "config.json");
 
-    vector<double> delta_j = model->get_delta_j(method);
 
     // Li2024
     vector<double> k_t(2 * n_machines + 1, 0.0);
@@ -162,9 +200,20 @@ int main(int argc, char* argv[]) {
         int n_demands = dist(rng_demands);
         cout << "Round " << t + 1 << ": " << n_demands << " demands" << endl;
         
-        vector<int> sizes = model->get_sizes(n_demands, rng_sizes);
-        vector<double> sigma = model->get_sigma(sizes);
-        vector<vector<double>> omega = model->get_omega(sizes);
+        vector<Demand> demands;
+        vector<int> sizes;
+        vector<double> sigma;
+        vector<vector<double>> omega;
+        if (demand_dataset) {
+            demands = demand_dataset->sample(n_demands, rng_sizes);
+            sizes = model->get_sizes(demands);
+            sigma = model->get_sigma(demands);
+            omega = model->get_omega(demands);
+        } else {
+            sizes = model->get_sizes(n_demands, rng_sizes);
+            sigma = model->get_sigma(sizes);
+            omega = model->get_omega(sizes);
+        }
 
         if (method == "Random")
             tie(x, gamma_k, elapsed_time) = getRandomSolution(n_machines, n_demands, n_models, rng_random);
@@ -175,7 +224,7 @@ int main(int argc, char* argv[]) {
             vector<double> eta_k = eta(W_k, epsilon_k, D_k, const_k, Q_k, FLOPS_k);
             tie(x, gamma_k, elapsed_time) = getSTOPSolution(
                 n_machines, n_demands, n_models, V, omega, Z_k, CI_k, PUE_k, e_k, C_avg, W_k, FLOPS_k, 
-                R_avg, Q_k, sigma, B_k, Y, delta_j, P_avg, eta_k, alpha_k, normalization_constant    
+                R_avg, Q_k, sigma, B_k, Y, delta_j, P_avg, eta_k, alpha_k, normalization_constant, accuracy_normalization
             );
         }
         else if (method.find("Li2024") != string::npos) {
@@ -210,57 +259,32 @@ int main(int argc, char* argv[]) {
             }
             x_at_sigma[m] = sum;
         }
-        double x_at_delta = 0.0;
+        vector<int> throughput(n_models, 0);
+        vector<double> score_sums(n_models, 0.0);
         for (int m = 0; m < n_machines; ++m) {
             for (int d = 0; d < n_demands; ++d) {
                 for (int mod = 0; mod < n_models; ++mod) {
-                    x_at_delta += x[m][d][mod] * (P_avg - delta_j[mod]);
+                    int assigned = x[m][d][mod];
+                    if (assigned == 0) continue;
+                    double score = demand_dataset ? demands[d].performance[mod] : delta_j_original[mod];
+                    throughput[mod] += assigned;
+                    score_sums[mod] += assigned * score;
                 }
             }
         }
+        const auto feedback = performance_feedback(*model, throughput, score_sums, P_avg, scaled_performance);
+        double x_at_delta = feedback.deficit;
+        double performance = feedback.overall;
 
         vector<double> emission_k = c_k(CI_k, PUE_k, e_k, x_at_omega);  // gCO2
         vector<double> response_time_k = R_k(x_at_sigma, B_k, epsilon_k, D_k, const_k, gamma_k, x_at_omega, FLOPS_k, Q_k);  // s
-        double performance;
-        int total_assignments = 0;
-        double weighted_sum = 0.0;
-        int non_zero_count = 0;
-        for (int m = 0; m < n_machines; ++m) {
-            for (int d = 0; d < n_demands; ++d) {
-                for (int mod = 0; mod < n_models; ++mod) {
-                    total_assignments += x[m][d][mod];
-                    if (x[m][d][mod] != 0) {
-                        weighted_sum += x[m][d][mod] * delta_j_original[mod];
-                        non_zero_count += x[m][d][mod];
-                    }
-                }
-            }
-        }
-        if (total_assignments == 0) {
-            performance = P_avg_original;
-        } else {
-            performance = weighted_sum / non_zero_count;
-        }
-
-        vector<int> throughput(n_models, 0);
-        if (total_assignments == 0) {
-            throughput = vector<int>(n_models, 0);
-        } else {
-            for (int m = 0; m < n_machines; ++m) {
-                for (int d = 0; d < n_demands; ++d) {
-                    for (int mod = 0; mod < n_models; ++mod) {
-                        throughput[mod] += x[m][d][mod];
-                    }
-                }
-            }
-        }
 
         if (method.find("STOP") != string::npos) {
             // read B_k's 
             B_k = query_residuals("../residuals.json", t, n_machines);
             Z_k = update_Z_Perc(Z_k, CI_k, PUE_k, e_k, x_at_omega, C_avg);
             W_k = update_W_Perc(W_k, x_at_sigma, B_k, epsilon_k, D_k, const_k, gamma_k, x_at_omega, FLOPS_k, Q_k, R_avg);
-            Y = update_Y_Perc(Y, x_at_delta, n_demands, P_avg);
+            Y = update_Y_Perc(Y, x_at_delta, n_demands, accuracy_normalization);
         }
         Q_k = update_Q(Q_k, FLOPS_k, x_at_omega);
 
@@ -272,6 +296,8 @@ int main(int argc, char* argv[]) {
             {"emission_k", emission_k},
             {"response_time_k", response_time_k},
             {"performance", performance},
+            {"performance_j", feedback.per_model},
+            {"x_at_delta", x_at_delta},
             {"Q_k", Q_k},
             {"Z_k", Z_k},
             {"W_k", W_k},

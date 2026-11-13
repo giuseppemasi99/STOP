@@ -11,3 +11,11 @@ geant
 weights/
 runs/
 _INFOCOM26__STOP.pdf
+!/run_benchmarks.sh
+
+# Keep final datasets in json_demands; retain only summaries from exporter work folders.
+/benchmark_results/*
+!/benchmark_results/metrics_*.csv
+/benchmark_results_whisper/*
+!/benchmark_results_whisper/*.summary.json
+/out.txt
