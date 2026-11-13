@@ -106,13 +106,20 @@ class ExportTests(unittest.TestCase):
             self.assertEqual(records[0]["input_shape"], [1, 3, 224, 224])
             self.assertEqual(records[0]["gflops"], 0.5)
             self.assertIsNone(backend.hook)
-            saved = json.loads((Path(directory) / "predictions_n.json").read_text())
+            saved = json.loads((Path(directory) / "predictions" / "n.json").read_text())
             self.assertEqual(len(saved), 2)
+
+    def test_metrics_are_written_to_metrics_subfolder(self):
+        with tempfile.TemporaryDirectory() as directory:
+            export.save_metrics_csv(SimpleNamespace(top1=0.9), {"num_images": 10}, "n",
+                                    "best.pt", 100, 20.0, Path(directory))
+            self.assertTrue((Path(directory) / "metrics" / "n.csv").is_file())
+        self.assertEqual(export.build_parser().parse_args([]).output_dir, "json_demands/yolo")
 
     def test_merge_only_needs_no_inference_dependencies(self):
         with tempfile.TemporaryDirectory() as directory:
             for size in export.MODEL_NAMES:
-                export.write_json(Path(directory) / f"predictions_{size}.json", [prediction("a.jpg")])
+                export.write_json(Path(directory) / "predictions" / f"{size}.json", [prediction("a.jpg")])
             args = export.build_parser().parse_args(["--merge-only", "--output-dir", directory])
             export.launch(args)
             merged = json.loads((Path(directory) / "demands.json").read_text())

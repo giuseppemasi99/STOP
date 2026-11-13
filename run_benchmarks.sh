@@ -12,11 +12,9 @@ imgsz=224
 data="data/animals/complete"
 device=auto
 max_samples=""
-whisper_output="benchmark_results_whisper"
-yolo_output="benchmark_results"
+whisper_output="json_demands/whisper"
+yolo_output="json_demands/yolo"
 project="runs_yolo"
-whisper_json="json_demands/whisper.json"
-yolo_json="json_demands/yolo.json"
 dry_run=false
 
 usage() {
@@ -26,7 +24,7 @@ Usage: ./run_benchmarks.sh [options]
 Runs Whisper tiny/small/medium/large, then trains and exports YOLO nano/medium/large.
 Whisper resumes existing compatible results. YOLO starts a new training run and
 uses the best validation checkpoint for each model.
-Final datasets: json_demands/whisper.json and json_demands/yolo.json.
+Final datasets: json_demands/whisper/demands.json and json_demands/yolo/demands.json.
 
 Options:
   --epochs N                  YOLO training epochs (default: 100)
@@ -34,8 +32,8 @@ Options:
   --data PATH                 YOLO dataset (default: data/animals/complete)
   --device auto|cuda|cpu|mps   Device for both exporters (default: auto; cuda uses GPU 0)
   --whisper-max-samples N      Limit Whisper clips (default: full validation split)
-  --whisper-output-dir PATH    Whisper export folder (default: benchmark_results_whisper)
-  --yolo-output-dir PATH       YOLO export folder (default: benchmark_results)
+  --whisper-output-dir PATH    Whisper export folder (default: json_demands/whisper)
+  --yolo-output-dir PATH       YOLO export folder (default: json_demands/yolo)
   --project PATH              YOLO training folder (default: runs_yolo)
   --dry-run                   Print commands without loading data or running models
   -h, --help                  Show this help
@@ -78,6 +76,9 @@ for count in "$epochs" "$imgsz" "${max_samples:-1}"; do
     fi
 done
 
+whisper_json="$whisper_output/demands.json"
+yolo_json="$yolo_output/demands.json"
+
 whisper_cmd=("$whisper_python" src/whisper/save_json.py --output-dir "$whisper_output")
 yolo_cmd=("$yolo_python" src/yolo/save_json.py --data "$data" --epochs "$epochs"
           --imgsz "$imgsz" --output-dir "$yolo_output" --project "$project")
@@ -118,14 +119,9 @@ if [[ "$whisper_output" == "$yolo_output" ]]; then
     exit 2
 fi
 
-mkdir -p -- json_demands
 printf '\nRunning Whisper...\n'
 "${whisper_cmd[@]}"
-cp -- "$whisper_output/demands.json" "$whisper_json.tmp"
-mv -- "$whisper_json.tmp" "$whisper_json"
 printf '\nRunning YOLO...\n'
 "${yolo_cmd[@]}"
-cp -- "$yolo_output/demands.json" "$yolo_json.tmp"
-mv -- "$yolo_json.tmp" "$yolo_json"
 printf '\nExports complete:\n  Whisper: %s\n  YOLO: %s\n' \
        "$whisper_json" "$yolo_json"

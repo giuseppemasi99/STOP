@@ -266,12 +266,20 @@ def create_asr_pipeline(model_id, device, dtype):
                     **{dtype_argument: dtype})
 
 
+def result_paths(args, size):
+    if args.output:
+        output = Path(args.output)
+        return output, output.with_suffix(".summary.json")
+    root = Path(args.output_dir)
+    return root / "predictions" / f"{size}.json", root / "metrics" / f"{size}.summary.json"
+
+
 def benchmark_model(args, size, dataset, total):
     import torch
     from jiwer import wer
     from tqdm import tqdm
 
-    output = Path(args.output) if args.output else Path(args.output_dir) / f"predictions_{size}.json"
+    output, summary_output = result_paths(args, size)
     model_id = get_model_id(size, args.multilingual)
     pipeline_device, dtype, device = select_device(args.device)
     config = {"schema_version": 1, "dataset": "openslr/librispeech_asr",
@@ -284,7 +292,7 @@ def benchmark_model(args, size, dataset, total):
               "transformers_version": version("transformers"), "jiwer_version": version("jiwer")}
     results = [] if args.no_resume else load_existing_results(output, config, model_id, dataset, total)
     if len(results) == total:
-        atomic_write_json(output.with_suffix(".summary.json"), create_summary(results, wer))
+        atomic_write_json(summary_output, create_summary(results, wer))
         return results
     print(f"Loading {model_id}; resuming at {len(results)} / {total}")
     asr = create_asr_pipeline(model_id, pipeline_device, dtype)
@@ -323,7 +331,7 @@ def benchmark_model(args, size, dataset, total):
         atomic_write_json(output, results)
         raise
     atomic_write_json(output, results)
-    atomic_write_json(output.with_suffix(".summary.json"), create_summary(results, wer))
+    atomic_write_json(summary_output, create_summary(results, wer))
     del asr
     if device == "cuda":
         torch.cuda.empty_cache()
@@ -334,7 +342,7 @@ def launch(args):
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     if args.merge_only:
-        predictions = {size: json.loads((output_dir / f"predictions_{size}.json").read_text()) for size in MODEL_SIZES}
+        predictions = {size: json.loads((output_dir / "predictions" / f"{size}.json").read_text()) for size in MODEL_SIZES}
     else:
         from datasets import Audio, load_dataset
         dataset = load_dataset("openslr/librispeech_asr", args.dataset_config, split=args.split)
@@ -358,7 +366,7 @@ def build_parser():
     parser.add_argument("--multilingual", action="store_true")
     parser.add_argument("--dataset-config", choices=["clean", "other"], default="clean")
     parser.add_argument("--split", choices=["validation", "test"], default="validation")
-    parser.add_argument("--output-dir", default="benchmark_results_whisper")
+    parser.add_argument("--output-dir", default="json_demands/whisper")
     parser.add_argument("--output", help="Single-model prediction file (requires --model-size)")
     parser.add_argument("--device", choices=["auto", "cpu", "cuda", "mps"], default="auto")
     parser.add_argument("--max-samples", type=int)

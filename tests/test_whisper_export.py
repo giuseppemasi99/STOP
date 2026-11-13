@@ -156,7 +156,7 @@ class WhisperExportTests(unittest.TestCase):
         records = [record("tiny", i) for i in range(2)]
         dataset = [{"id": str(i), "text": "HELLO WORLD"} for i in range(2)]
         with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "predictions_tiny.json"
+            path = Path(directory) / "predictions" / "tiny.json"
             export.atomic_write_json(path, records)
             loaded = export.load_existing_results(path, records[0]["benchmark_config"], records[0]["model"], dataset, 2)
             self.assertEqual(len(loaded), 2)
@@ -184,10 +184,20 @@ class WhisperExportTests(unittest.TestCase):
                 _, _, from_path = export.extract_audio({"audio": {"path": str(path)}})
                 self.assertEqual(metadata, from_path)
 
+    def test_output_layout_and_explicit_output_override(self):
+        args = export.build_parser().parse_args([])
+        output, summary = export.result_paths(args, "tiny")
+        self.assertEqual(output, Path("json_demands/whisper/predictions/tiny.json"))
+        self.assertEqual(summary, Path("json_demands/whisper/metrics/tiny.summary.json"))
+        args.output = "custom/results.json"
+        output, summary = export.result_paths(args, "tiny")
+        self.assertEqual(output, Path("custom/results.json"))
+        self.assertEqual(summary, Path("custom/results.summary.json"))
+
     def test_merge_only_without_transformers_or_dataset_load(self):
         with tempfile.TemporaryDirectory() as directory:
             for size in export.MODEL_SIZES:
-                export.atomic_write_json(Path(directory) / f"predictions_{size}.json", [record(size)])
+                export.atomic_write_json(Path(directory) / "predictions" / f"{size}.json", [record(size)])
             args = export.build_parser().parse_args(["--merge-only", "--output-dir", directory])
             export.launch(args)
             merged = json.loads((Path(directory) / "demands.json").read_text())

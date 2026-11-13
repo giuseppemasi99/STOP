@@ -13,9 +13,7 @@ runs/
 _INFOCOM26__STOP.pdf
 !/run_benchmarks.sh
 
-# Keep final datasets in json_demands; retain only summaries from exporter work folders.
-/benchmark_results/*
-!/benchmark_results/metrics_*.csv
-/benchmark_results_whisper/*
-!/benchmark_results_whisper/*.summary.json
+# Final datasets and metrics are tracked; per-model predictions are reproducible intermediates.
+/json_demands/yolo/predictions/
+/json_demands/whisper/predictions/
 /out.txt

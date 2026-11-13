@@ -17,6 +17,7 @@ IMAGE_FIELDS = ("image", "ground_truth_label", "width", "height", "input_bytes")
 def write_json(path, records):
     """Replace only after a complete, finite JSON document has been written."""
     path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(path.suffix + ".tmp")
     with temporary.open("w") as output:
         json.dump(records, output, indent=2, allow_nan=False)
@@ -113,7 +114,7 @@ def benchmark_inference(model, images, size, output_dir, imgsz, device=None):
                             "device": str(actual_device)})
     finally:
         handle.remove()
-    write_json(Path(output_dir) / f"predictions_{size}.json", records)
+    write_json(Path(output_dir) / "predictions" / f"{size}.json", records)
     timings = [record["inference_time_ms"] for record in records]
     correct = sum(record["correct"] for record in records)
     return records, {"num_images": len(records), "num_correct": correct,
@@ -167,7 +168,9 @@ def save_metrics_csv(metrics, stats, size, checkpoint, epochs, training_seconds,
             row[f"{name}_accuracy"] = float(getattr(metrics, name))
     for name, value in getattr(metrics, "speed", {}).items():
         row[f"ultralytics_{name}_ms"] = value
-    with (output_dir / f"metrics_{size}.csv").open("w", newline="") as output:
+    metrics_dir = Path(output_dir) / "metrics"
+    metrics_dir.mkdir(parents=True, exist_ok=True)
+    with (metrics_dir / f"{size}.csv").open("w", newline="") as output:
         writer = csv.DictWriter(output, fieldnames=list(row))
         writer.writeheader()
         writer.writerow(row)
@@ -178,7 +181,7 @@ def launch(args):
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     if args.merge_only:
-        predictions = {size: json.loads((output_dir / f"predictions_{size}.json").read_text())
+        predictions = {size: json.loads((output_dir / "predictions" / f"{size}.json").read_text())
                        for size in MODEL_NAMES}
     else:
         from ultralytics import YOLO
@@ -217,7 +220,7 @@ def launch(args):
             save_metrics_csv(metrics, stats, size, checkpoint,
                              0 if args.skip_train else args.epochs, train_seconds, output_dir)
         if args.size:
-            print(f"Saved predictions_{args.size}.json; run all n/m/l sizes, then --merge-only.")
+            print(f"Saved {output_dir / 'predictions' / (args.size + '.json')}; run all n/m/l sizes, then --merge-only.")
             return
     merged = merge_predictions(predictions)
     write_json(output_dir / "demands.json", merged)
@@ -231,12 +234,12 @@ def build_parser():
     parser.add_argument("--epochs", type=int, default=1)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--project", default="runs_yolo")
-    parser.add_argument("--output-dir", default="benchmark_results")
+    parser.add_argument("--output-dir", default="json_demands/yolo")
     parser.add_argument("--imgsz", type=int, default=224, help="Explicit square training/validation/inference size")
     parser.add_argument("--device", help="Ultralytics device, e.g. cpu or 0")
     parser.add_argument("--skip-train", action="store_true", help="Export existing checkpoints without retraining")
     parser.add_argument("--weights", nargs="*", default=[], metavar="SIZE=PATH", help="Checkpoint overrides for n/m/l")
-    parser.add_argument("--merge-only", action="store_true", help="Merge existing predictions_n/m/l.json files")
+    parser.add_argument("--merge-only", action="store_true", help="Merge existing predictions/{n,m,l}.json files")
     return parser
 
 

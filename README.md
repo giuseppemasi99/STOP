@@ -142,9 +142,9 @@ model groups and extrapolated scores remain possible.
 ### Exporting YOLO demands
 
 `src/yolo/save_json.py` trains and benchmarks nano, medium, and large classifiers
-by default, then writes `benchmark_results/demands.json` in the simulator schema.
-It also retains `predictions_n.json`, `predictions_m.json`, `predictions_l.json`
-and per-model metrics CSVs. Install `requirements.txt`, including Pillow and
+by default, then writes `json_demands/yolo/demands.json` in the simulator schema.
+It also retains `predictions/n.json`, `predictions/m.json`, `predictions/l.json`
+and per-model CSVs under `metrics/`. Install `requirements.txt`, including Pillow and
 `ultralytics-thop`, in the environment used for training/inference.
 
 ```bash
@@ -163,7 +163,7 @@ inference. `--size n` (or `m`, `l`) processes just one variant. After running ea
 variant separately with the same validation data and output directory, merge:
 
 ```bash
-python src/yolo/save_json.py --merge-only --output-dir benchmark_results
+python src/yolo/save_json.py --merge-only --output-dir json_demands/yolo
 ```
 
 Merging joins exact image paths and requires all three variants with matching
@@ -195,7 +195,7 @@ python -B -m unittest discover -s tests -p 'test_yolo_export.py' -v
 ### Exporting Whisper demands
 
 `src/whisper/save_json.py` benchmarks LibriSpeech with **tiny, small, medium,
-and large** and writes `benchmark_results_whisper/demands.json` for
+and large** and writes `json_demands/whisper/demands.json` for
 `--model_name Whisper`. Model predictions and summaries are also saved separately.
 It preserves manual FLAC decoding, English text normalization, long-form
 transcription, and periodic resumable checkpoints from the original benchmark.
@@ -228,7 +228,9 @@ configuration. Existing exports without the new fields must be regenerated.
 `base`, `large-v2`, `large-v3`, and `turbo` remain available for standalone
 benchmarks, but cannot replace the four canonical model entries during merging.
 `--output` overrides a single-model prediction filename; merge-only expects the
-standard `predictions_tiny/small/medium/large.json` names in `--output-dir`.
+standard `predictions/tiny.json`, `small.json`, `medium.json`, and `large.json`
+paths under `--output-dir`. Summaries are written to `metrics/<size>.summary.json`.
+A custom `--output` keeps its summary alongside that explicitly named file.
 
 Each demand includes exact `duration_seconds`, compressed FLAC `input_bytes`,
 sample rate and sample count. The bytes represent sending the original encoded
@@ -277,11 +279,26 @@ python -B -m unittest discover -s tests -p 'test_whisper_export.py' -v
 This runs the full Whisper validation split for all four models, then trains
 YOLO nano/medium/large for up to 100 epochs each and exports the best checkpoints.
 The defaults are 100 YOLO epochs, input resolution 224, and automatic device
-selection. The runner saves the final datasets as `json_demands/whisper.json`
-and `json_demands/yolo.json`. Per-model predictions and metrics remain in
-`benchmark_results_whisper/` and `benchmark_results/`; YOLO checkpoints go under
-`runs_yolo/`. Each final dataset is copied after its exporter succeeds, with an
-atomic replacement so a failed copy cannot leave a partially written final file.
+selection. Both the standalone exporters and the runner write directly to this
+layout, without duplicate merged datasets:
+
+```text
+json_demands/
+├── yolo/
+│   ├── demands.json
+│   ├── predictions/           # n.json, m.json, l.json
+│   └── metrics/               # n.csv, m.csv, l.csv
+└── whisper/
+    ├── demands.json
+    ├── predictions/           # tiny.json, small.json, medium.json, large.json
+    └── metrics/               # <size>.summary.json
+```
+
+YOLO checkpoints remain under `runs_yolo/`. Final datasets and metrics are tracked
+in Git; intermediate predictions are ignored. `--output-dir` on either exporter
+changes the root for that workload, retaining the same subfolder layout.
+For the simulator use `--demands_json json_demands/yolo/demands.json` or
+`--demands_json json_demands/whisper/demands.json`.
 Whisper resumes compatible saved results; YOLO starts new training runs.
 
 For a smaller run or to inspect commands without running models:
